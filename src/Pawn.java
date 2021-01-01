@@ -1,11 +1,53 @@
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Pawn extends Piece {
+public class Pawn extends Piece implements Serializable {
 
-    public Pawn(String image, int row, int col, Side side) throws IOException
+    public Pawn(String image, int row, int col, Side side, ChessBoard b) throws IOException
     {
-        super(image, row, col, side);
+        super(image, row, col, side, 0, 1, b);
+    }
+/*
+    public String toString()
+    {
+        return getSide()+" "+"pawn";
+    }
+
+ */
+
+    public Square getToCaptureEnPassantAt()
+    {
+        return toCaptureEnPassantAt;
+    }
+
+    public void setToCaptureEnPassantAt(Square s)
+    {
+        toCaptureEnPassantAt = s;
+    }
+    public Square getCapturedEnPassantAt()
+    {
+        return capturedEnPassantAt;
+    }
+
+    public void setCapturedEnPassantAt(Square s)
+    {
+        capturedEnPassantAt = s;
+    }
+
+    public int getEnPassantBecameAvailableDepth()
+    {
+        return enPassantBecameAvailableDepth;
+    }
+
+    public void setEnPassantBecameAvailableDepth(int n)
+    {
+        enPassantBecameAvailableDepth = n;
+    }
+    public String toString()
+    {
+        String strSide = (side.equals(Side.WHITE)) ? "w" : "b";
+        return strSide+"p";
     }
 
 
@@ -22,21 +64,20 @@ public class Pawn extends Piece {
         }
         if(canPawnAttackRightDiag())
         {
-            System.out.println("adding pawn attack right diag to pawn legal moves in pawn class");
             pawnMoves.add(pawnAttackRightDiag());
         }
         if(getRow() == 1)
         {
-            if(side == Side.BLACK && !ChessBoard.chessBoard[getRow()+2][getCol()].containsPiece() && canAdvPawn())
+            if(side == Side.BLACK && !board.chessBoard[getRow()+2][getCol()].containsPiece() && canAdvPawn())
             {
-                pawnMoves.add(ChessBoard.chessBoard[getRow()+2][getCol()]);
+                pawnMoves.add(board.chessBoard[getRow()+2][getCol()]);
             }
         }
         else if(getRow() == 6)
         {
-            if(side == Side.WHITE && !ChessBoard.chessBoard[getRow()-2][getCol()].containsPiece() && canAdvPawn())
+            if(side == Side.WHITE && !board.chessBoard[getRow()-2][getCol()].containsPiece() && canAdvPawn())
             {
-                pawnMoves.add(ChessBoard.chessBoard[getRow()-2][getCol()]);
+                pawnMoves.add(board.chessBoard[getRow()-2][getCol()]);
             }
         }
         return pawnMoves;
@@ -46,11 +87,11 @@ public class Pawn extends Piece {
     {
         if(side == Side.BLACK)
         {
-            return ChessBoard.chessBoard[getRow()+1][getCol()];
+            return board.chessBoard[getRow()+1][getCol()];
         }
         else if(side == Side.WHITE)
         {
-            return ChessBoard.chessBoard[getRow()-1][getCol()];
+            return board.chessBoard[getRow()-1][getCol()];
         }
         return null;
     }
@@ -59,11 +100,11 @@ public class Pawn extends Piece {
     {
         if(side == Side.BLACK)
         {
-            return getRow()+1 != 8 && !ChessBoard.chessBoard[getRow()+1][getCol()].containsPiece();
+            return getRow()+1 != 8 && !board.chessBoard[getRow()+1][getCol()].containsPiece();
         }
         else if(side == Side.WHITE)
         {
-            return getRow()-1 != -1 && !ChessBoard.chessBoard[getRow()-1][getCol()].containsPiece();
+            return getRow()-1 != -1 && !board.chessBoard[getRow()-1][getCol()].containsPiece();
         }
         return false;
     }
@@ -72,7 +113,7 @@ public class Pawn extends Piece {
     {
         if(side == Side.BLACK)
         {
-            if(getRow()+1 > 7 || getCol()-1 < 0 || !ChessBoard.chessBoard[getRow()+1][getCol()-1].containsPiece() || ChessBoard.chessBoard[getRow()+1][getCol()-1].getPiece().getSide().equals(Side.BLACK))
+            if(getRow()+1 > 7 || getCol()-1 < 0 || !board.chessBoard[getRow()+1][getCol()-1].containsPiece() || board.chessBoard[getRow()+1][getCol()-1].getPiece().getSide().equals(Side.BLACK))
             {
                 return false;
             }
@@ -83,7 +124,7 @@ public class Pawn extends Piece {
         }
         else if(side == Side.WHITE)
         {
-            if(getRow()-1 < 0 || getCol()-1 < 0 || !ChessBoard.chessBoard[getRow()-1][getCol()-1].containsPiece() || ChessBoard.chessBoard[getRow()-1][getCol()-1].getPiece().getSide().equals(Side.WHITE))
+            if(getRow()-1 < 0 || getCol()-1 < 0 || !board.chessBoard[getRow()-1][getCol()-1].containsPiece() || board.chessBoard[getRow()-1][getCol()-1].getPiece().getSide().equals(Side.WHITE))
             {
                 return false;
             }
@@ -99,11 +140,11 @@ public class Pawn extends Piece {
     {
         if(side == Side.BLACK)
         {
-            return ChessBoard.chessBoard[getRow()+1][getCol()-1];
+            return board.chessBoard[getRow()+1][getCol()-1];
         }
         else
         {
-            return ChessBoard.chessBoard[getRow()-1][getCol()-1];
+            return board.chessBoard[getRow()-1][getCol()-1];
         }
     }
 
@@ -111,23 +152,20 @@ public class Pawn extends Piece {
     {
         if(side == Side.BLACK)
         {
-            return ChessBoard.chessBoard[getRow()+1][getCol()+1];
+            return board.chessBoard[getRow()+1][getCol()+1];
         }
         else
         {
-            return ChessBoard.chessBoard[getRow()-1][getCol()+1];
+            return board.chessBoard[getRow()-1][getCol()+1];
         }
     }
 
     public boolean canPawnAttackRightDiag()
     {
-        System.out.println("inside canpawnattackrightdiag");
         if(side == Side.BLACK)
         {
-            System.out.println("side is black");
-            if(getRow()+1 > 7 || getCol()+1 > 7 || !ChessBoard.chessBoard[getRow()+1][getCol()+1].containsPiece() || ChessBoard.chessBoard[getRow()+1][getCol()+1].getPiece().getSide().equals(Side.BLACK))
+            if(getRow()+1 > 7 || getCol()+1 > 7 || !board.chessBoard[getRow()+1][getCol()+1].containsPiece() || board.chessBoard[getRow()+1][getCol()+1].getPiece().getSide().equals(Side.BLACK))
             {
-                System.out.println("out of bounds OR diag doesn't contain piece OR contains piece of same side");
                 return false;
             }
             else
@@ -137,19 +175,15 @@ public class Pawn extends Piece {
         }
         else if(side == Side.WHITE)
         {
-            System.out.println("side is white");
-            if(getRow()-1 < 0 || getCol()+1 > 7 || !ChessBoard.chessBoard[getRow()-1][getCol()+1].containsPiece() || ChessBoard.chessBoard[getRow()-1][getCol()+1].getPiece().getSide().equals(Side.WHITE))
+            if(getRow()-1 < 0 || getCol()+1 > 7 || !board.chessBoard[getRow()-1][getCol()+1].containsPiece() || board.chessBoard[getRow()-1][getCol()+1].getPiece().getSide().equals(Side.WHITE))
             {
-                System.out.println("out of bounds OR diag doesn't contain piece OR contains piece of same side");
                 return false;
             }
             else
             {
-                System.out.println("can attack diag");
                 return true;
             }
         }
-        System.out.println("not sure why it's false");
         return false;
     }
 }

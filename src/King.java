@@ -1,12 +1,25 @@
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class King extends Piece {
+public class King extends Piece implements Serializable {
 
-    public King(String image, int row, int col, Side side) throws IOException
+    public King(String image, int row, int col, Side side, ChessBoard b) throws IOException
     {
-        super(image, row, col, side);
+        super(image, row, col, side, 5, 10000, b);
     }
+/*
+    public String toString()
+    {
+        return getSide()+" "+"king";
+    }
+
+ */
+public String toString()
+{
+    String strSide = (side.equals(Side.WHITE)) ? "w" : "b";
+    return strSide+"@";
+}
 
     public ArrayList<Square> getLegalMoves()
     {

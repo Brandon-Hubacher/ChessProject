@@ -1,22 +1,35 @@
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Knight extends Piece {
+public class Knight extends Piece implements Serializable {
 
-    public Knight(String image, int row, int col, Side side) throws IOException
+    public Knight(String image, int row, int col, Side side, ChessBoard b) throws IOException
     {
-        super(image, row, col, side);
+        super(image, row, col, side, 1, 3, b);
     }
 
-    public Knight(int row, int col, Side side)
+    public Knight(int row, int col, Side side, ChessBoard b)
     {
-        super(row, col, side);
+        super(row, col, side, b);
     }
 
     public Knight(String image) throws IOException
     {
         super(image);
     }
+/*
+    public String toString()
+    {
+        return getSide()+" "+"knight";
+    }
+
+ */
+public String toString()
+{
+    String strSide = (side.equals(Side.WHITE)) ? "w" : "b";
+    return strSide+"k";
+}
 
     public ArrayList<Square> getLegalMoves()
     {
@@ -45,8 +58,6 @@ public class Knight extends Piece {
                     moves.add(getUpLeft(1).getLeft(1));
                 }
             }
-
-
         }
         if(downLeftInBounds(1))
         {

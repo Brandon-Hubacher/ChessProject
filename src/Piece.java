@@ -3,16 +3,24 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public abstract class Piece extends JComponent {
-    protected Image image;
+public abstract class Piece extends JComponent implements Serializable {
+    protected transient Image image;
     protected int row;
     protected int col;
     //protected String side;
     protected Side side;
-    protected ImageIcon imageIcon;
+    protected transient ImageIcon imageIcon;
+    protected int zobristType;
+    protected int zobristSide;
+    protected double value;
     public enum Side {WHITE, BLACK}
+    ChessBoard board;
+    protected int enPassantBecameAvailableDepth = -1;
+    protected Square capturedEnPassantAt = null;
+    protected Square toCaptureEnPassantAt = null;
 
     /*
     public Piece()
@@ -26,26 +34,42 @@ public abstract class Piece extends JComponent {
      */
     public Piece(String imageFile) throws IOException
     {
+        //board = b;
         image = ImageIO.read(new File(imageFile));
         imageIcon = new ImageIcon(image);
         //type = imageFile.split();
         String tempType = imageFile.substring(9, imageFile.length()-4);
         side = (tempType.contains("red")) ? Side.BLACK : Side.WHITE;
+        zobristSide = (side.equals(Side.WHITE)) ? 0 : 1;
     }
 
-    public Piece(String imageFile, int row, int col, Side side) throws IOException
+    public Piece(String imageFile, int row, int col, Side side, int zType, int value, ChessBoard b) throws IOException
     {
         image = ImageIO.read(new File(imageFile));
         this.row = row;
         this.col = col;
         this.side = side;
+        zobristType = zType;
+        this.value = value;
+        board = b;
     }
 
-    public Piece(int row, int col, Side side)
+    public Piece(int row, int col, Side side, ChessBoard b)
     {
+        board = b;
         this.row = row;
         this.col = col;
         this.side = side;
+    }
+
+    public int getZobristType()
+    {
+        return zobristType;
+    }
+
+    public int getZobristSide()
+    {
+        return zobristSide;
     }
 
     public ImageIcon getImageIcon()
@@ -62,8 +86,46 @@ public abstract class Piece extends JComponent {
 
 
  */
+    public Square getLeft(int num)
+    {
+        return board.chessBoard[getRow()][getCol()-num];
+    }
 
+    public Square getRight(int num)
+    {
+        return board.chessBoard[getRow()][getCol()+num];
+    }
 
+    public Square getUp(int num)
+    {
+        return board.chessBoard[getRow()-num][getCol()];
+    }
+
+    public Square getDown(int num)
+    {
+        return board.chessBoard[getRow()+num][getCol()];
+    }
+
+    public Square getUpLeft(int num)
+    {
+        return board.chessBoard[getRow()-num][getCol()-num];
+    }
+
+    public Square getUpRight(int num)
+    {
+        return board.chessBoard[getRow()-num][getCol()+num];
+    }
+
+    public Square getDownLeft(int num)
+    {
+        return board.chessBoard[getRow()+num][getCol()-num];
+    }
+
+    public Square getDownRight(int num)
+    {
+        return board.chessBoard[getRow()+num][getCol()+num];
+    }
+/*
     public Square getLeft(int num)
     {
         return ChessBoard.chessBoard[getRow()][getCol()-num];
@@ -104,6 +166,7 @@ public abstract class Piece extends JComponent {
         return ChessBoard.chessBoard[getRow()+num][getCol()+num];
     }
 
+    */
     public boolean leftInBounds(int num)
     {
         return getCol()-num >= 0;
@@ -365,7 +428,7 @@ public abstract class Piece extends JComponent {
         {
             // TODO: changing piece type might break
             Side sideForKnight = (side.equals(Side.WHITE)) ? Side.WHITE : Side.BLACK;
-            Piece knightCheck = new Knight(row, col, sideForKnight);
+            Piece knightCheck = new Knight(row, col, sideForKnight, board);
             //setType("knight");
             //ArrayList<Square> knightMoves = getLegalMoves();
             ArrayList<Square> knightMoves = knightCheck.getLegalMoves();

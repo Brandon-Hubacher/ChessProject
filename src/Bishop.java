@@ -1,16 +1,29 @@
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Bishop extends Piece {
+public class Bishop extends Piece implements Serializable {
 
-    public Bishop(String image, int row, int col, Side side) throws IOException
+    public Bishop(String image, int row, int col, Side side, ChessBoard b) throws IOException
     {
-        super(image, row, col, side);
+        super(image, row, col, side, 2, 3, b);
     }
+/*
+    public String toString()
+    {
+        return getSide()+" "+"bishop";
+    }
+
+ */
 
     public Bishop(String image) throws IOException
     {
         super(image);
+    }
+    public String toString()
+    {
+        String strSide = (side.equals(Side.WHITE)) ? "w" : "b";
+        return strSide+"b";
     }
 
     public ArrayList<Square> getLegalMoves()

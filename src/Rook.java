@@ -1,12 +1,25 @@
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Rook extends Piece {
+public class Rook extends Piece implements Serializable {
 
-    public Rook(String image, int row, int col, Side side) throws IOException
+    public Rook(String image, int row, int col, Side side, ChessBoard b) throws IOException
     {
-        super(image, row, col, side);
+        super(image, row, col, side, 3, 5, b);
     }
+/*
+    public String toString()
+    {
+        return getSide()+" "+"rook";
+    }
+
+ */
+public String toString()
+{
+    String strSide = (side.equals(Side.WHITE)) ? "w" : "b";
+    return strSide+"r";
+}
 
     public Rook(String image) throws IOException
     {

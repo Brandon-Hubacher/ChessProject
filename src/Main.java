@@ -13,6 +13,16 @@ public class Main {
         frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+
+        Zobrist.zobristFillArray();
+        Zobrist.createInitialHash();
+
+        MinMax m = new MinMax();
+        //ChessBoard board = new ChessBoard(b);
+        //System.out.println("!!!!!!!!!!!!!"+m.minMax(b, Integer.MIN_VALUE, Integer.MAX_VALUE, 3, true)+"!!!!!!!!!");
+
+        //System.out.println("!!!!!!!!!!!!!"+m.miniMax(b, Integer.MIN_VALUE, Integer.MAX_VALUE, 3, true)+"!!!!!!!!!");
+        System.out.println("!!!!!!!!!!!!!"+m.officialMinMax(b, Integer.MIN_VALUE, Integer.MAX_VALUE, 6, true)+"!!!!!!!!!");
 /*
         JFrame overlay = new JFrame("Transparent Window");
         overlay.setUndecorated(true);

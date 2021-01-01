@@ -1,16 +1,29 @@
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Queen extends Piece {
+public class Queen extends Piece implements Serializable {
 
-    public Queen(String image, int row, int col, Side side) throws IOException
+    public Queen(String image, int row, int col, Side side, ChessBoard b) throws IOException
     {
-        super(image, row, col, side);
+        super(image, row, col, side, 4, 9, b);
     }
+/*
+    public String toString()
+    {
+        return getSide()+" "+"queen";
+    }
+
+ */
 
     public Queen(String image) throws IOException
     {
         super(image);
+    }
+    public String toString()
+    {
+        String strSide = (side.equals(Side.WHITE)) ? "w" : "b";
+        return strSide+"Q";
     }
 
     public ArrayList<Square> getLegalMoves()

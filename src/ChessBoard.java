@@ -4,20 +4,24 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 
-public class ChessBoard extends JPanel implements MouseListener, MouseMotionListener {
-    public static Square[][] chessBoard = new Square[8][8];
+public class ChessBoard extends JPanel implements MouseListener, MouseMotionListener, Serializable {
+    //public static Square[][] chessBoard = new Square[8][8];
+    public Square[][] chessBoard = new Square[8][8];
+    //public Square[][] chessBoard = new Square[8][8];
     JPanel f = new JPanel();
     public static boolean whiteTurn;
     public static boolean whiteInCheck = false;
     public static boolean blackInCheck = false;
     public Square whiteKing;
     public Square blackKing;
-    public ArrayList<Square> thisIstheWay;
-    public ArrayList<Square> expCheck;
-    public ArrayList<Square> availableKingMoves;
-    public ArrayList<Square> availablePieceMoves;
+    public ArrayList<Square> thisIstheWay = new ArrayList<>();
+    public ArrayList<Square> expCheck = new ArrayList<>();
+    public ArrayList<Square> availableKingMoves = new ArrayList<>();
+    public ArrayList<Square> availablePieceMoves = new ArrayList<>();
     public boolean promotionDone = true;
     public ArrayList<Piece> original;
     public boolean blackKingSideRookMoved = false;
@@ -25,7 +29,15 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     public boolean blackKingMoved = false;
     public boolean whiteKingSideRookMoved = false;
     public boolean whiteQueenSideRookMoved = false;
-    public boolean whiteKingMoved = false;
+    public boolean whiteKingMoved;
+    public int blackKingSideRookMovedDepth;
+    public int blackQueenSideRookMovedDepth;
+    public int blackKingMovedDepth;
+    public int whiteKingSideRookMovedDepth;
+    public int whiteQueenSideRookMovedDepth;
+    public int whiteKingMovedDepth;
+    public ArrayList<Integer> kingInCheckDepth = new ArrayList<>();
+
     public Square enPassant = null;
     public int fiftyMoveDraw = 0;
     public int threeFoldRep = 1;
@@ -33,9 +45,13 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     public int modFour = 0;
     public Square[][] repetition = new Square[8][8];
     public boolean canEnPassant = false;
-    public ArrayList<Piece> whitesCapturedPieces = new ArrayList<>();
-    public ArrayList<Piece> blacksCapturedPieces = new ArrayList<>();
-    public Square olds = null;
+    public ArrayList<Piece> whitesCapturedPiecesList = new ArrayList<>();
+    public ArrayList<Piece> blacksCapturedPiecesList = new ArrayList<>();
+
+    public HashMap<Piece, Move> whitesCapturedPiecesMap = new HashMap<>();
+    public HashMap<Piece, Move> blacksCapturedPiecesMap = new HashMap<>();
+
+    public Square from = null;
     boolean isPressed = false;
     public Square news;
     Point offset;
@@ -49,6 +65,43 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     boolean runClicked;
     public ArrayList<Square> currentLegalMoves = new ArrayList<>();
     public static Dimension size;
+    public Square lastMovedFrom;
+    public Square lastMovedTo;
+
+    public ChessBoard(ChessBoard b)
+    {
+        from = b.from;
+        news = b.news;
+        pressed = b.pressed;
+        blackKing = b.blackKing;
+        whiteKing = b.whiteKing;
+        thisIstheWay = b.thisIstheWay;
+        expCheck = b.expCheck;
+        availableKingMoves = b.availableKingMoves;
+        availablePieceMoves = b.availablePieceMoves;
+        promotionDone = b.promotionDone;
+        original = b.original;
+        blackKingSideRookMoved = b.blackKingSideRookMoved;
+        blackQueenSideRookMoved = b.blackQueenSideRookMoved;
+        blackKingMoved = b.blackKingMoved;
+        whiteKingSideRookMoved = b.whiteKingSideRookMoved;
+        whiteQueenSideRookMoved = b.whiteQueenSideRookMoved;
+        whiteKingMoved = b.whiteKingMoved;
+        blackKingSideRookMovedDepth = b.blackKingSideRookMovedDepth;
+        blackQueenSideRookMovedDepth = b.blackQueenSideRookMovedDepth;
+        blackKingMovedDepth = b.blackKingMovedDepth;
+        whiteKingSideRookMovedDepth = b.whiteKingSideRookMovedDepth;
+        whiteQueenSideRookMovedDepth = b.whiteQueenSideRookMovedDepth;
+        whiteKingMovedDepth = b.whiteKingMovedDepth;
+        for(int i = 0; i < 8; i++)
+        {
+            for(int z = 0; z < 8; z++)
+            {
+                //[i][z] = b.board[i][z];
+                chessBoard[i][z] = b.chessBoard[i][z];
+            }
+        }
+    }
 
     public ChessBoard() {
         whiteTurn = true;
@@ -73,13 +126,13 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 try{
-                    chessBoard[row][col] = new Square(row, col);
+                    chessBoard[row][col] = new Square(row, col, this);
                     if (row % 2 == 0) {
                         //color = (col % 2 != 0) ? Color.decode("#769656") : Color.decode("#eeeed2");
-                        color = (col % 2 != 0) ? Color.decode("#F0D9B5") : Color.decode("#B58863");
+                        color = (col % 2 != 0) ? Color.decode("#B58863") : Color.decode("#F0D9B5");
                     } else {
                         //color = (col % 2 == 0) ? Color.decode("#769656") : Color.decode("#eeeed2");
-                        color = (col % 2 == 0) ? Color.decode("#F0D9B5") : Color.decode("#B58863");
+                        color = (col % 2 == 0) ? Color.decode("#B58863") : Color.decode("#F0D9B5");
                     }
                     chessBoard[row][col].setBackground(color);
                     chessBoard[row][col].setSquareColor(color);
@@ -91,33 +144,33 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                 try{
                     if(row == 0)
                     {
-                        if(col == 0 || col == 7) {chessBoard[row][col].setPiece(new Rook("Pictures/red rook.png", row, col, Piece.Side.BLACK));}
-                        if(col == 1 || col == 6) { chessBoard[row][col].setPiece(new Knight("Pictures/red knight.png", row, col, Piece.Side.BLACK));}
-                        if(col == 2 || col == 5) { chessBoard[row][col].setPiece(new Bishop("Pictures/red bishop.png", row, col, Piece.Side.BLACK));}
-                        if(col == 3) { chessBoard[row][col].setPiece(new Queen("Pictures/red queen.png", row, col, Piece.Side.BLACK));}
+                        if(col == 0 || col == 7) {chessBoard[row][col].setPiece(new Rook("Pictures/red rook.png", row, col, Piece.Side.BLACK, this));}
+                        if(col == 1 || col == 6) { chessBoard[row][col].setPiece(new Knight("Pictures/red knight.png", row, col, Piece.Side.BLACK, this));}
+                        if(col == 2 || col == 5) { chessBoard[row][col].setPiece(new Bishop("Pictures/red bishop.png", row, col, Piece.Side.BLACK, this));}
+                        if(col == 3) { chessBoard[row][col].setPiece(new Queen("Pictures/red queen.png", row, col, Piece.Side.BLACK, this));}
                         if(col == 4)
                         {
-                            chessBoard[row][col].setPiece(new King("Pictures/red king.png", row, col, Piece.Side.BLACK));
+                            chessBoard[row][col].setPiece(new King("Pictures/red king.png", row, col, Piece.Side.BLACK, this));
                             blackKing = chessBoard[row][col];
                         }
                     }
                     else if(row == 1)
                     {
-                        chessBoard[row][col].setPiece(new Pawn("Pictures/red pawn.png", row, col, Piece.Side.BLACK));
+                        chessBoard[row][col].setPiece(new Pawn("Pictures/red pawn.png", row, col, Piece.Side.BLACK, this));
                     }
                     else if(row == 6)
                     {
-                        chessBoard[row][col].setPiece(new Pawn("Pictures/pawn.png", row, col, Piece.Side.WHITE));
+                        chessBoard[row][col].setPiece(new Pawn("Pictures/pawn.png", row, col, Piece.Side.WHITE, this));
                     }
                     else if(row == 7)
                     {
-                        if(col == 0 || col == 7) { chessBoard[row][col].setPiece(new Rook("Pictures/rook.png", row, col, Piece.Side.WHITE));}
-                        if(col == 1 || col == 6) { chessBoard[row][col].setPiece(new Knight("Pictures/knight.png", row, col, Piece.Side.WHITE));}
-                        if(col == 2 || col == 5) { chessBoard[row][col].setPiece(new Bishop("Pictures/bishop.png", row, col, Piece.Side.WHITE));}
-                        if(col == 3) { chessBoard[row][col].setPiece(new Queen("Pictures/queen.png", row, col, Piece.Side.WHITE));}
+                        if(col == 0 || col == 7) { chessBoard[row][col].setPiece(new Rook("Pictures/rook.png", row, col, Piece.Side.WHITE, this));}
+                        if(col == 1 || col == 6) { chessBoard[row][col].setPiece(new Knight("Pictures/knight.png", row, col, Piece.Side.WHITE, this));}
+                        if(col == 2 || col == 5) { chessBoard[row][col].setPiece(new Bishop("Pictures/bishop.png", row, col, Piece.Side.WHITE, this));}
+                        if(col == 3) { chessBoard[row][col].setPiece(new Queen("Pictures/queen.png", row, col, Piece.Side.WHITE, this));}
                         if(col == 4)
                         {
-                            chessBoard[row][col].setPiece(new King("Pictures/king.png", row, col, Piece.Side.WHITE));
+                            chessBoard[row][col].setPiece(new King("Pictures/king.png", row, col, Piece.Side.WHITE, this));
                             whiteKing = chessBoard[row][col];
                         }
                     }
@@ -127,9 +180,36 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                     System.out.println("lol ioexception");
                 }
                 //layeredPane.add(chessBoard[row][col]);
+                //chessBoard[row][col] = chessBoard[row][col];
                 f.add(chessBoard[row][col]);
             }
         }
+
+    }
+
+
+
+    public ArrayList<Square> getAllMoves()
+    {
+        ArrayList<Square> allMoves = new ArrayList<>();
+        for(int i = 0; i < 8; i++)
+        {
+            for(int z = 0; z < 8; z++)
+            {
+                if(chessBoard[i][z].containsPiece())
+                {
+                    if(chessBoard[i][z].getPiece().getSide().equals(Piece.Side.WHITE) && whiteTurn)
+                    {
+                        allMoves.addAll(getMoves(chessBoard[i][z]));
+                    }
+                    else if(chessBoard[i][z].getPiece().getSide().equals(Piece.Side.BLACK) && !whiteTurn)
+                    {
+                        allMoves.addAll(getMoves(chessBoard[i][z]));
+                    }
+                }
+            }
+        }
+        return allMoves;
     }
 
     public void paintComponent(Graphics g)
@@ -180,7 +260,6 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     {
         runClicked = true;
         runDragAndRelease = true;
-        System.out.println("mouse Pressed!!!!!");
         int row = e.getY()/(e.getComponent().getHeight() / 8);
         int col = e.getX()/(e.getComponent().getWidth() / 8);
         pressed = chessBoard[row][col];
@@ -189,35 +268,23 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
             // TODO: make sure to account for blue squares
             if (((pressed.getPiece().getSide().equals(Piece.Side.WHITE) && !whiteTurn) || ((pressed.getPiece().getSide().equals(Piece.Side.BLACK) && whiteTurn))) && !isPressed /*pressed.getBackground() != Color.BLUE && pressed.getBackground() != Color.WHITE*/)
             {
-                System.out.println("wait ur turn");
-                //runClicked = false;
                 runDragAndRelease = false;
-                if(isPressed)
-                {
-                    System.out.println("isPressed should be impossible here");
-                    clickAway();
-                }
                 return;
             }
         }
-        if(!isPressed && !pressed.dotMove.isVisible() /*pressed.getBackground() != Color.BLUE*/ && pressed.getBackground() != Color.WHITE && !pressed.containsPiece())
+        if(!isPressed && (!pressed.dotMove.isVisible() && !pressed.attackedPieceOverlayLabel.isVisible()) /*pressed.getBackground() != Color.BLUE*/ && pressed.getBackground() != Color.WHITE && !pressed.containsPiece())
         {
-            System.out.println("pressing nothing");
-            //runClicked = false;
             runDragAndRelease = false;
             return;
         }
-        if(isPressed && !pressed.dotMove.isVisible()/*pressed.getBackground() != Color.BLUE*/ && pressed.getBackground() != Color.WHITE && !pressed.containsPiece())
+        if(isPressed && (!pressed.dotMove.isVisible() && !pressed.attackedPieceOverlayLabel.isVisible())/*pressed.getBackground() != Color.BLUE*/ && pressed.getBackground() != Color.WHITE && !pressed.containsPiece())
         {
-            System.out.println("clicking away in mousePressed");
-            //runClicked = false;
             runDragAndRelease = false;
             clickAway();
             return;
         }
-        if(isPressed && !pressed.dotMove.isVisible() /*pressed.getBackground() != Color.BLUE*/ && pressed.getBackground() != Color.WHITE && pressed.containsPiece() && !pressed.getPiece().getSide().equals(olds.getPiece().getSide()))
+        if(isPressed && (!pressed.dotMove.isVisible() && !pressed.attackedPieceOverlayLabel.isVisible()) /*pressed.getBackground() != Color.BLUE*/ && pressed.getBackground() != Color.WHITE && pressed.containsPiece() && !pressed.getPiece().getSide().equals(from.getPiece().getSide()))
         {
-            System.out.println(olds.getPiece().getSide()+" must make a legal move, attacking that piece is not a legal move");
             runDragAndRelease = false;
             clickAway();
             return;
@@ -226,11 +293,10 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         Piece pressedPiece;
         Piece.Side pressedSide;
         //isPressed = false;
-        if(!pressed.dotMove.isVisible() /*pressed.getBackground() != Color.BLUE*/ && pressed.getBackground() != Color.WHITE && pressed.containsPiece())
+        if((!pressed.dotMove.isVisible() && !pressed.attackedPieceOverlayLabel.isVisible()) /*pressed.getBackground() != Color.BLUE*/ && pressed.getBackground() != Color.WHITE && pressed.containsPiece())
         {
-            if(isPressed && olds.getPiece().getSide().equals(pressed.getPiece().getSide()) && !olds.equalsSquare(pressed))
+            if(isPressed && from.getPiece().getSide().equals(pressed.getPiece().getSide()) && !from.equalsSquare(pressed))
             {
-                System.out.println("mouse pressing a different piece");
                 pressDiffPiece(pressed);
                 //runDragAndRelease = false;
                 //runClicked = false;
@@ -245,18 +311,14 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
             //olds = pressed;
             chessPiece = new JLabel(new ImageIcon(pressed.getPiece().getImage()));
             chessPiece.setBounds(60, 60, 60, 60);
-            System.out.println("chessPiece size: "+chessPiece.getSize());
             Component c = f.findComponentAt(e.getX(), e.getY());
 
             Point parentLocation = c.getLocation();
-            System.out.println(parentLocation.x+", "+parentLocation.y);
-            System.out.println("e: "+e.getX()+", "+e.getY());
             chessPiece.setOpaque(false);
             chessPiece.setVisible(true);
             cover = new JLabel();
             cover.setBounds(pressed.getHeight(), pressed.getHeight(), pressed.getHeight(), pressed.getHeight());
             cover.setLocation(parentLocation);
-            System.out.println(parentLocation.x+", "+parentLocation.y);
             //cover.setBackground(pressed.getSquareColor());
             //cover.setBackground(Color.BLACK);
             cover.setBackground(Color.decode("#646D40"));
@@ -281,7 +343,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
 
         if(!isPressed && pressed.containsPiece() && promotionDone)
         {
-            olds = pressed;
+            from = pressed;
             ArrayList<Square> moves = getMoves(pressed);
             currentLegalMoves = moves;
             paintMoves(moves);
@@ -290,103 +352,55 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         }
         else if(isPressed)
         {
-            /*
-            if(pressed.getBackground() != Color.BLUE && pressed.getBackground() != Color.WHITE && !pressed.containsPiece())
-            {
-                System.out.println("isp");
-                clickAway();
-                return;
-            }
-
-             */
             news = pressed; // might break
-            if(!pressed.dotMove.isVisible() /*pressed.getBackground() != Color.BLUE*/ && pressed.getBackground() != Color.WHITE)
+            if(pressed.containsPiece() && pressed.getBackground() != Color.WHITE && pressed.attackedPieceOverlayLabel.isVisible() /*pressed.getBackground() == Color.BLUE*/)
             {
-                /*
-                if(pressed.containsPiece() && olds.getPiece().getSide().equals(pressed.getPiece().getSide()) && promotionDone)
+                pressedPiece = pressed.getPiece();
+                //String pressedType = pressedPiece.getType();
+                pressedSide = pressedPiece.getSide();
+
+                if(pressedSide.equals(Piece.Side.BLACK))
                 {
-                    //Piece pressedPiece = pressed.getPiece();
-                    pressedPiece = pressed.getPiece();
-                    /*
-
-                    if(!olds.equalsSquare(pressed))
-                    {
-                        System.out.println("you're pressing a diff piece");
-                        pressDiffPiece(pressed);
-                        repaint();
-                    }
-                    else
-                    {
-                        System.out.println("you're pressing the same piece");
-                    }
-
-
-                }
-
-
-                else if(promotionDone)
-                {
-                    clickAway();
+                    whitesCapturedPiecesList.add(pressedPiece);
                 }
                 else
                 {
-                    System.out.println("promote your pawn pwease");
+                    blacksCapturedPiecesList.add(pressedPiece);
                 }
-
-                 */
-
             }
-            else
+
+            if(promotionDone && (pressed.dotMove.isVisible() || pressed.attackedPieceOverlayLabel.isVisible()))
             {
-                if(pressed.containsPiece() && pressed.getBackground() != Color.WHITE && !pressed.dotMove.isVisible() /*pressed.getBackground() == Color.BLUE*/)
+                updateCastleRights();
+                if(enPassant != null && !pressed.containsPiece())
                 {
-                    pressedPiece = pressed.getPiece();
-                    //String pressedType = pressedPiece.getType();
-                    pressedSide = pressedPiece.getSide();
-
-                    if(pressedSide.equals(Piece.Side.BLACK))
+                    if(pressed.equalsSquare(enPassant))
                     {
-                        whitesCapturedPieces.add(pressedPiece);
+                        captureEnPassant();
                     }
-                    else
-                    {
-                        blacksCapturedPieces.add(pressedPiece);
-                    }
+                    enPassant.setBackground(enPassant.revertColor());
                 }
-
-                if(promotionDone)
-                {
-                    updateCastleRights();
-                    if(enPassant != null && !pressed.containsPiece())
-                    {
-                        if(pressed.equalsSquare(enPassant))
-                        {
-                            captureEnPassant();
-                        }
-                        enPassant.setBackground(enPassant.revertColor());
-                    }
-                    enPassant = null;
-                    System.out.println("moving piece");
-                    movePiece(pressed, row, col);
-                    //updateCastleRights();
-                    expCheck = exposedCheck(olds, news);
-                }
-                //following movePiece, news contains the piece that was moved
-                if(news.getPiece() instanceof Pawn && promotionDone && (news.getSquareRow() == 0 || news.getSquareRow() == 7))
-                {
-                    original = generatePawnPromotion(news);
-                    runDragAndRelease = false;
-                }
-                else if(pressed.getBackground() == Color.WHITE)
-                {
-                    promotePawn();
-                }
-                if(promotionDone)
-                {
-                    ArrayList<Square> check = news.getPiece().getLegalMoves();
-                    thisIstheWay = isInCheck(check, news);
-                    assessCheckMateAndStaleMate();
-                }
+                enPassant = null;
+                movePiece(pressed, row, col);
+                //updateCastleRights();
+                expCheck = exposedCheck(from, news);
+            }
+            //following movePiece, news contains the piece that was moved
+            if(news.getPiece() instanceof Pawn && promotionDone && (news.getSquareRow() == 0 || news.getSquareRow() == 7))
+            {
+                original = generatePawnPromotion(news);
+                runDragAndRelease = false;
+            }
+            else if(pressed.getBackground() == Color.WHITE)
+            {
+                runDragAndRelease = false;
+                promotePawn();
+            }
+            if(promotionDone)
+            {
+                ArrayList<Square> check = news.getPiece().getLegalMoves();
+                thisIstheWay = isInCheck(check, news);
+                assessCheckMateAndStaleMate();
             }
         }
     }
@@ -396,31 +410,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         {
             return;
         }
-        System.out.println("mouse dragged");
-        /*
-        if(mouseClickOnly)
-        {
-            return;
-        }
-
-         */
         fromDrag = true;
-        /*
-        if(pressed.getBackground() != Color.BLUE && pressed.getBackground() != Color.WHITE && !pressed.containsPiece() && !isPressed)
-        {
-            return;
-        }
-        else if(pressed.getBackground() != Color.BLUE && pressed.getBackground() != Color.WHITE && !pressed.containsPiece() && isPressed)
-        {
-            clickAway();
-            return;
-        }
-        if((pressed.getPiece().getSide().equals(Piece.Side.WHITE) && !whiteTurn) || ((pressed.getPiece().getSide().equals(Piece.Side.BLACK) && whiteTurn)))
-        {
-            System.out.println("wait ur turn");
-        }
-
-         */
         if(pressed.containsPiece())
         {
             if(pressed.getPiece() instanceof Pawn)
@@ -431,7 +421,6 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
             {
                 chessPiece.setLocation(e.getX() - (chessPiece.getHeight()/2), e.getY() - (chessPiece.getHeight()/2));
             }
-            System.out.println("chessPiece Location: "+chessPiece.getX()+", "+chessPiece.getY());
         }
     }
     public void mouseReleased(MouseEvent e)
@@ -447,68 +436,21 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         {
             return;
         }
-        //System.out.println("mouse released!");
-        /*
-        if(!fromDrag)
-        {
-            return;
-        }
-        /*
-        if(pressed.getBackground() != Color.BLUE && pressed.getBackground() != Color.WHITE && !pressed.containsPiece() && !isPressed)
-        {
-            System.out.println("releasing nothing");
-            return;
-        }
-        else if(pressed.getBackground() != Color.BLUE && pressed.getBackground() != Color.WHITE && !pressed.containsPiece() && isPressed)
-        {
-            clickAway();
-            return;
-        }
-
-         */
         int row = e.getY()/(e.getComponent().getHeight() / 8);
         int col = e.getX()/(e.getComponent().getWidth() / 8);
         pressed = chessBoard[row][col];
         news = pressed; // might break
-        if(pressed.equalsSquare(olds))
+        if(pressed.equalsSquare(from))
         {
-            System.out.println("effectively click");
             return;
         }
-        if(!pressed.dotMove.isVisible()/*pressed.getBackground() != Color.BLUE*/ && pressed.getBackground() != Color.WHITE && pressed.getBackground() != Color.BLACK && olds != null)
+        // TODO: and pressed background isn't that green color
+        if(!pressed.dotMove.isVisible() && !pressed.attackedPieceOverlayLabel.isVisible()/*pressed.getBackground() != Color.BLUE*/ && pressed.getBackground() != Color.WHITE && !pressed.getBackground().equals(Color.decode("#646D40")) && from != null)
         {
-            System.out.println("click away from Drag");
             clickAway();
-            /*
-            if(pressed.containsPiece() && olds.getPiece().getSide().equals(pressed.getPiece().getSide()) && promotionDone)
-            {
-                Piece pressedPiece = pressed.getPiece();
-
-                if(!olds.equalsSquare(pressed))
-                {
-                    System.out.println("you're pressing a diff piece");
-                    pressDiffPiece(pressed);
-                    repaint();
-                }
-                else
-                {
-                    System.out.println("you're pressing the same piece");
-                }
-            }
-            else if(promotionDone)
-            {
-                clickAway();
-            }
-            else
-            {
-                System.out.println("promote your pawn pwease");
-            }
-
-             */
         }
-        else if(pressed.getBackground() == Color.BLACK)
+        else if(pressed.getBackground().equals(Color.decode("#646D40"))) //TODO: background is that green color
         {
-            System.out.println("what up square");
             isPressed = true;
         }
         else
@@ -521,15 +463,15 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
 
                 if(pressedSide.equals(Piece.Side.BLACK))
                 {
-                    whitesCapturedPieces.add(pressedPiece);
+                    whitesCapturedPiecesList.add(pressedPiece);
                 }
                 else
                 {
-                    blacksCapturedPieces.add(pressedPiece);
+                    blacksCapturedPiecesList.add(pressedPiece);
                 }
             }
 
-            if(promotionDone)
+            if(promotionDone && (pressed.dotMove.isVisible() || pressed.attackedPieceOverlayLabel.isVisible()))
             {
                 updateCastleRights();
                 if(enPassant != null && !pressed.containsPiece())
@@ -542,10 +484,10 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                 }
                 enPassant = null;
                 movePiece(pressed, row, col);
-                expCheck = exposedCheck(olds, news);
+                expCheck = exposedCheck(from, news);
             }
             //following movePiece, news contains the piece that was moved
-            if(news.getPiece() instanceof Pawn && promotionDone && (news.getSquareRow() == 0 || news.getSquareRow() == 7))
+            if(promotionDone && (news.getPiece() instanceof Pawn) && (news.getSquareRow() == 0 || news.getSquareRow() == 7))
             {
                 original = generatePawnPromotion(news);
             }
@@ -560,16 +502,6 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                 assessCheckMateAndStaleMate();
             }
         }
-        /*
-        layeredPane.setCursor(null);
-        if(chessPiece == null) return;
-        chessPiece.setVisible(false);
-        cover.setVisible(false);
-        layeredPane.remove(cover);
-        layeredPane.remove(chessPiece);
-        chessPiece.setVisible(true);
-
-         */
     }
 
     public void mouseClicked(MouseEvent e)
@@ -715,23 +647,63 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     public void captureEnPassant()
     {
         Square removePiece;
-        if(olds.getPiece().getSide().equals(Piece.Side.WHITE) && olds.getPiece() instanceof Pawn)
+        if(from.getPiece().getSide().equals(Piece.Side.WHITE) && from.getPiece() instanceof Pawn)
         {
             removePiece = enPassant.getDown(1);
             removePiece.removePiece();
         }
-        else if(olds.getPiece().getSide().equals(Piece.Side.BLACK) && olds.getPiece() instanceof Pawn)
+        else if(from.getPiece().getSide().equals(Piece.Side.BLACK) && from.getPiece() instanceof Pawn)
         {
             removePiece = enPassant.getUp(1);
             removePiece.removePiece();
         }
+        ((Pawn) from.getPiece()).setCapturedEnPassantAt(enPassant);
     }
 
     public void clickAway()
     {
-        System.out.println("clicking away");
-        olds.setBackground(olds.revertColor());
-        olds.revertColor(olds.getPiece().getLegalMoves());
+        /*
+        if(lastMovedFrom == null && lastMovedTo == null)
+        {
+            lastMovedFrom = olds;
+            lastMovedTo = pressed;
+        }
+
+         */
+        /*
+        else
+        {
+            lastMovedFrom.setBackground(lastMovedFrom.revertColor());
+            lastMovedTo.setBackground(lastMovedTo.revertColor());
+            lastMovedFrom = olds;
+            lastMovedTo = pressed;
+        }
+
+         */
+
+        from.setBackground(from.revertColor());
+        from.revertColor(from.getPiece().getLegalMoves());
+        if(lastMovedFrom != null && lastMovedTo != null)
+        {
+            if(lastMovedFrom.getSquareColorType().equalsIgnoreCase("light"))
+            {
+                lastMovedFrom.setBackground(Color.decode("#CED26E"));
+            }
+            else
+            {
+                //olds.setBackground(Color.decode("#BBBF63"));
+                lastMovedFrom.setBackground(Color.decode("#A2A600"));
+            }
+            if(lastMovedTo.getSquareColorType().equalsIgnoreCase("light"))
+            {
+                lastMovedTo.setBackground(Color.decode("#CED26E"));
+            }
+            else
+            {
+                //olds.setBackground(Color.decode("#BBBF63"));
+                lastMovedTo.setBackground(Color.decode("#A2A600"));
+            }
+        }
         repaint();
         isPressed = false;
     }
@@ -746,7 +718,6 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         else
         {
             //TODO: en passant might not be accounted for in isBlocking or ifBlocking
-            System.out.println("getting moves not in check");
             moves = movesIfNotInCheck(pressed);
         }
         return moves;
@@ -757,40 +728,77 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         ArrayList<Square> moves = new ArrayList<>();
         if(pressed.getPiece() instanceof King)
         {
-            availableKingMoves = whereKingCanGo(olds);
+            availableKingMoves = whereKingCanGo(from);
             ArrayList<Square> castleMoves = getCastleMoves();
             availableKingMoves.addAll(castleMoves);
             moves = availableKingMoves;
         }
         else
         {
-            if(enPassant != null && pressed.getPiece() instanceof Pawn)
+            boolean enPassantCheck = false;
+            if(pressed.getPiece() instanceof Pawn)
+            {
+                Piece.Side movingSide = pressed.getPiece().getSide();
+                if(pressed.getSquareCol() == 0)
+                {
+                    if(pressed.getRight(1).containsPiece())
+                    {
+                        if(pressed.getRight(1).getPiece() instanceof Pawn && !pressed.getRight(1).getPiece().getSide().equals(movingSide))
+                        {
+                            enPassantCheck = true;
+                        }
+                    }
+                }
+                else if(pressed.getSquareCol() == 7)
+                {
+                    if(pressed.getLeft(1).containsPiece())
+                    {
+                        if(pressed.getLeft(1).getPiece() instanceof Pawn && !pressed.getLeft(1).getPiece().getSide().equals(movingSide))
+                        {
+                            enPassantCheck = true;
+                        }
+                    }
+                }
+                else
+                {
+                    if(pressed.getRight(1).containsPiece())
+                    {
+                        if(pressed.getRight(1).getPiece() instanceof Pawn && !pressed.getRight(1).getPiece().getSide().equals(movingSide))
+                        {
+                            enPassantCheck = true;
+                        }
+                    }
+                    else if(pressed.getLeft(1).containsPiece())
+                    {
+                        if(pressed.getLeft(1).getPiece() instanceof Pawn && !pressed.getLeft(1).getPiece().getSide().equals(movingSide))
+                        {
+                            enPassantCheck = true;
+                        }
+                    }
+                }
+            }
+            if(enPassantCheck && /*enPassant != null*/ ((Pawn) pressed.getPiece()).getToCaptureEnPassantAt() != null && pressed.getPiece() instanceof Pawn)
             {
                 int rowTrav = (pressed.getPiece().getSide().equals(Piece.Side.WHITE)) ? -1 : 1;
                 if((pressed.getSquareRow() + rowTrav == enPassant.getSquareRow()) && ((pressed.getSquareCol() + 1 == enPassant.getSquareCol()) || (pressed.getSquareCol() - 1 == enPassant.getSquareCol())))
                 {
-                    //enPassant.setBackground(Color.BLUE);
-                    //repaint();
-                    canEnPassant = true;
-                    moves.add(enPassant);
+                    if((enPassant.getSquareRow() == 2 && !pressed.getPiece().getSide().equals(Piece.Side.BLACK)) || (enPassant.getSquareRow() == 5 && !pressed.getPiece().getSide().equals(Piece.Side.WHITE)))
+                    {
+                        //enPassant.setBackground(Color.BLUE);
+                        //repaint();
+                        canEnPassant = true;
+                        moves.add(enPassant);
+                    }
                 }
             }
-            ArrayList<Square> blocking = isBlocking(olds);
-            System.out.println("olds passed through isBlocking: "+olds.getSquareRow()+", "+olds.getSquareCol());
-            System.out.println("olds piece: "+olds.getPiece());
+            ArrayList<Square> blocking = isBlocking(from);
             if(blocking == null)
             {
-                System.out.println("piece not blocking, getting legal moves");
-                moves.addAll(olds.getPiece().getLegalMoves());
-                for(Square s : moves)
-                {
-                    System.out.println("legal moves set to avaPieceMoves: "+s.getSquareRow()+", "+s.getSquareCol());
-                }
+                moves.addAll(from.getPiece().getLegalMoves());
                 availablePieceMoves = moves;
             }
             else
             {
-                System.out.println("piece is blocking, only allowing moves found in blocking and legal... I think");
                 moves = ifBlocking(blocking, canEnPassant);
                 availablePieceMoves = moves;
             }
@@ -810,9 +818,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         }
         else
         {
-            System.out.println("checking for stalemate");
             boolean inStaleMate = noAvailableMoves();
-            System.out.println("inStaleMate: "+inStaleMate);
             if(inStaleMate)
             {
                 System.out.println("STALEMATE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
@@ -825,7 +831,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         // TODO: get rid of cancelButton
         int rowTrav = (news.getPiece().getSide().equals(Piece.Side.WHITE)) ? 1 : -1;
         ArrayList<Square> toRevert = new ArrayList<>();
-        int origRow = olds.getSquareRow() + (-1 * rowTrav);
+        int origRow = from.getSquareRow() + (-1 * rowTrav);
         int origCol = news.getSquareCol();
         for(int i = 0; i < original.size(); i++)
         {
@@ -850,40 +856,119 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         }
         revertColor(toRevert);
         repaint();
-        olds = news = toRevert.get(0);
+        //System.out.println("toRevert.get(0): "+toRevert.get(0).getSquareRow()+", "+toRevert.get(0).getSquareCol());
+        //System.out.println(toRevert.get(0).getPiece());
+        from = news = toRevert.get(0);
+        //System.out.println("news set to torevert: "+news.getPiece());
         promotionDone = true;
         isPressed = false;
     }
 
     public void updateCastleRights()
     {
-        if(olds.getPiece() instanceof Rook)
+        //System.out.println("update castle rights");
+        if(from.getPiece() instanceof Rook)
         {
-            if(olds.getSquareRow() == 0 && olds.getSquareCol() == 0)
+            if(from.getSquareRow() == 0 && from.getSquareCol() == 0)
             {
                 blackQueenSideRookMoved = true;
             }
-            else if(olds.getSquareRow() == 0 && olds.getSquareCol() == 7)
+            else if(from.getSquareRow() == 0 && from.getSquareCol() == 7)
             {
                 blackKingSideRookMoved = true;
             }
-            else if(olds.getSquareRow() == 7 && olds.getSquareCol() == 7)
+            else if(from.getSquareRow() == 7 && from.getSquareCol() == 7)
             {
                 whiteKingSideRookMoved = true;
             }
-            else if(olds.getSquareRow() == 7 && olds.getSquareCol() == 0)
+            else if(from.getSquareRow() == 7 && from.getSquareCol() == 0)
             {
                 whiteQueenSideRookMoved = true;
             }
         }
-        else if(olds.getPiece() instanceof King)
+        else if(from.getPiece() instanceof King)
         {
-            if(olds.getSquareRow() == 0 && olds.getSquareCol() == 4)
+            if(from.getSquareRow() == 0 && from.getSquareCol() == 4)
             {
                 blackKingMoved = true;
             }
-            else if(olds.getSquareRow() == 7 && olds.getSquareCol() == 4)
+            else if(from.getSquareRow() == 7 && from.getSquareCol() == 4)
             {
+                whiteKingMoved = true;
+            }
+        }
+    }
+
+    public ArrayList<Move> getAllMoves(Piece.Side sideToMove, int depth)
+    {
+        ArrayList<Move> output = new ArrayList<>();
+        boolean madeWhileInCheck = false;
+        for(int i = 0; i < 8; i++)
+        {
+            for(int z = 0; z < 8; z++)
+            {
+                Square checking = chessBoard[i][z];
+                if(checking.containsPiece())
+                {
+                    if(checking.getPiece().getSide().equals(sideToMove))
+                    {
+                        from = checking;
+                        ArrayList<Square> legalMoves = getMoves(checking);
+                        if(whiteInCheck || blackInCheck)
+                        {
+                            madeWhileInCheck = true;
+                        }
+                        if(legalMoves.isEmpty())
+                        {
+                            continue;
+                        }
+                        for(Square legal : legalMoves)
+                        {
+                            output.add(new Move(this, checking, legal, checking.getPiece(), madeWhileInCheck, depth));
+                        }
+                    }
+                }
+            }
+        }
+        return output;
+    }
+
+    public void updateCastleRights(int depth)
+    {
+        //System.out.println("update castle rights");
+        if(from.getPiece() instanceof Rook)
+        {
+            if(from.getSquareRow() == 0 && from.getSquareCol() == 0)
+            {
+                blackQueenSideRookMovedDepth = depth;
+                blackQueenSideRookMoved = true;
+            }
+            else if(from.getSquareRow() == 0 && from.getSquareCol() == 7)
+            {
+                blackKingSideRookMovedDepth = depth;
+                blackKingSideRookMoved = true;
+            }
+            else if(from.getSquareRow() == 7 && from.getSquareCol() == 7)
+            {
+                whiteKingSideRookMovedDepth = depth;
+                whiteKingSideRookMoved = true;
+            }
+            else if(from.getSquareRow() == 7 && from.getSquareCol() == 0)
+            {
+                whiteQueenSideRookMovedDepth = depth;
+                whiteQueenSideRookMoved = true;
+            }
+        }
+        else if(from.getPiece() instanceof King)
+        {
+            if(from.getSquareRow() == 0 && from.getSquareCol() == 4)
+            {
+                blackKingMovedDepth = depth;
+                blackKingMoved = true;
+            }
+            else if(from.getSquareRow() == 7 && from.getSquareCol() == 4)
+            {
+                whiteKingMovedDepth = depth;
                 whiteKingMoved = true;
             }
         }
@@ -894,7 +979,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         //boolean canCastle = false;
         ArrayList<Square> kingSideCastle = new ArrayList<>();
         ArrayList<Square> queenSideCastle = new ArrayList<>();
-        if(olds.getPiece().getSide().equals(Piece.Side.WHITE))
+        if(from.getPiece().getSide().equals(Piece.Side.WHITE))
         {
             if(!whiteKingMoved && (!whiteKingSideRookMoved || !whiteQueenSideRookMoved))
             {
@@ -912,7 +997,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                                     //canCastle = true;
                                     break;
                                 }
-                                Square kingPass = olds.getRight(z);
+                                Square kingPass = from.getRight(z);
                                 kingPass.setPiece(whiteKing.getPiece());
                                 kingPass.getPiece().setPlacement(kingPass.getSquareRow(), kingPass.getSquareCol());
                                 ArrayList<Square> isKingInCheck = kingPass.getPiece().isInCheckHorrible();
@@ -925,14 +1010,14 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                                 }
                             }
                         }
-                        if(olds.getRight(i).containsPiece() && i != 3)
+                        if(from.getRight(i).containsPiece() && i != 3)
                         {
                             kingSideCastle.clear();
                             break;
                         }
                         if(i != 3)
                         {
-                            kingSideCastle.add(olds.getRight(i));
+                            kingSideCastle.add(from.getRight(i));
                         }
 
                     }
@@ -950,7 +1035,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                                     //paintMoves(queenSide);
                                     break;
                                 }
-                                Square kingPass = olds.getLeft(z);
+                                Square kingPass = from.getLeft(z);
                                 kingPass.setPiece(whiteKing.getPiece());
                                 kingPass.getPiece().setPlacement(kingPass.getSquareRow(), kingPass.getSquareCol());
                                 ArrayList<Square> isKingInCheck = kingPass.getPiece().isInCheckHorrible();
@@ -962,14 +1047,14 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                                 }
                             }
                         }
-                        if(olds.getLeft(i).containsPiece() && i != 4)
+                        if(from.getLeft(i).containsPiece() && i != 4)
                         {
                             queenSideCastle.clear();
                             break;
                         }
                         if(i != 3 && i != 4)
                         {
-                            queenSideCastle.add(olds.getLeft(i));
+                            queenSideCastle.add(from.getLeft(i));
                         }
                     }
                 }
@@ -992,7 +1077,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                                     //paintMoves(kingSide);
                                     break;
                                 }
-                                Square kingPass = olds.getRight(z);
+                                Square kingPass = from.getRight(z);
                                 kingPass.setPiece(blackKing.getPiece());
                                 kingPass.getPiece().setPlacement(kingPass.getSquareRow(), kingPass.getSquareCol());
                                 ArrayList<Square> isKingInCheck = kingPass.getPiece().isInCheckHorrible();
@@ -1004,14 +1089,14 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                                 }
                             }
                         }
-                        if(olds.getRight(i).containsPiece() && i != 3)
+                        if(from.getRight(i).containsPiece() && i != 3)
                         {
                             kingSideCastle.clear();
                             break;
                         }
                         if(i != 3)
                         {
-                            kingSideCastle.add(olds.getRight(i));
+                            kingSideCastle.add(from.getRight(i));
                         }
 
                     }
@@ -1029,7 +1114,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                                     //paintMoves(queenSide);
                                     break;
                                 }
-                                Square kingPass = olds.getLeft(z);
+                                Square kingPass = from.getLeft(z);
                                 kingPass.setPiece(blackKing.getPiece());
                                 kingPass.getPiece().setPlacement(kingPass.getSquareRow(), kingPass.getSquareCol());
                                 ArrayList<Square> isKingInCheck = kingPass.getPiece().isInCheckHorrible();
@@ -1041,14 +1126,14 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                                 }
                             }
                         }
-                        if(olds.getLeft(i).containsPiece() && i != 4)
+                        if(from.getLeft(i).containsPiece() && i != 4)
                         {
                             queenSideCastle.clear();
                             break;
                         }
                         if(i != 3 && i != 4)
                         {
-                            queenSideCastle.add(olds.getLeft(i));
+                            queenSideCastle.add(from.getLeft(i));
                         }
                     }
                 }
@@ -1060,17 +1145,12 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
 
     public boolean castle(Square pressed)
     {
-        System.out.println(pressed.getSquareRow()+", "+pressed.getSquareCol());
-        System.out.println(pressed.getBackground());
-        System.out.println(olds.getBackground());
         if(whiteInCheck || blackInCheck)
         {
-            System.out.println("white or black in check");
             return false;
         }
         if(pressed.getSquareRow() == 7 && pressed.getSquareCol() == 6 && pressed.dotMove.isVisible() /*pressed.getBackground() == Color.BLUE*/)
         {
-            System.out.println("castling white kingside");
             updateKing(pressed);
             Square newRookSquare = whiteKing.getLeft(1);
             Piece tempRookPiece = whiteKing.getRight(1).getPiece();
@@ -1121,7 +1201,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         {
             if(square != null)
             {
-                //square.setBackground(square.revertColor());
+                square.setBackground(square.revertColor());
                 square.dotMove.setVisible(false);
             }
         }
@@ -1130,24 +1210,24 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     public void pressDiffPiece(Square pressed)
     {
         ArrayList<Square> moves = new ArrayList<>();
-        olds.setBackground(olds.revertColor());
+        from.setBackground(from.revertColor());
         if(whiteInCheck || blackInCheck)
         {
             //olds.setBackground(olds.revertColor());
-            if(olds.getPiece() instanceof King)
+            if(from.getPiece() instanceof King)
             {
-                olds.revertColor(availableKingMoves);
+                from.revertColor(availableKingMoves);
                 //olds.revertColor(availablePieceMoves);
 
             }
             else
             {
-                olds.revertColor(olds.getPiece().getLegalMoves());
+                from.revertColor(from.getPiece().getLegalMoves());
             }
-            olds = pressed;
-            olds.setPiece(pressed.getPiece());
+            from = pressed;
+            from.setPiece(pressed.getPiece());
             //olds.setBackground(Color.black);
-            olds.setBackground(Color.decode("#646D40"));
+            from.setBackground(Color.decode("#646D40"));
             if(pressed.getPiece() instanceof King)
             {
                 //TODO: not sure if this accounts for castling moves
@@ -1156,7 +1236,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
             }
             else
             {
-                availablePieceMoves = movesIfInCheck(olds);
+                availablePieceMoves = movesIfInCheck(from);
                 paintMoves(availablePieceMoves);
                 //ArrayList<Square> m = ifInCheck(olds);
                 //paintMoves(m);
@@ -1164,16 +1244,16 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         }
         else
         {
-            if(olds.getPiece() instanceof King)
+            if(from.getPiece() instanceof King)
             {
-                olds.revertColor(availableKingMoves);
+                from.revertColor(availableKingMoves);
             }
             else
             {
-                olds.revertColor(availablePieceMoves);
+                from.revertColor(availablePieceMoves);
             }
             //olds.revertColor(olds.getPiece().getLegalMoves());
-            olds = pressed;
+            from = pressed;
             moves = getMoves(pressed);
             currentLegalMoves = moves;
             paintMoves(moves);
@@ -1196,22 +1276,422 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
 
     public void updateKing(Square s)
     {
-        Piece p = olds.getPiece();
+        Piece p = from.getPiece();
         if(p instanceof King)
         {
             if(p.getSide().equals(Piece.Side.BLACK))
             {
                 blackKing = s;
-                blackKing.setPiece(p);
-                blackKing.getPiece().setPlacement(blackKing.getSquareRow(), blackKing.getSquareCol());
+                //blackKing.setPiece(p);
+                //blackKing.getPiece().setPlacement(blackKing.getSquareRow(), blackKing.getSquareCol());
             }
             else
             {
                 whiteKing = s;
-                whiteKing.setPiece(p);
-                whiteKing.getPiece().setPlacement(whiteKing.getSquareRow(), whiteKing.getSquareCol());
+                //whiteKing.setPiece(p);
+                //whiteKing.getPiece().setPlacement(whiteKing.getSquareRow(), whiteKing.getSquareCol());
             }
         }
+    }
+
+    // TODO: issue might be with making pressed equal to some square and pressed is used for different things?
+    public void undoMove(Square fromHere, Square toHere, int fromDepth, int toDepth, boolean madeWhileInCheck)
+    {
+        // TODO: undo en passant!!!
+        /*
+        if(from.getPiece() instanceof King && pressed.getSquareRow() == 4 && pressed.getSquareCol() == 0)
+        {
+            System.out.println("depth when king moves to forbidden square: "+depth);
+            System.out.println("king moves from: "+from.getSquareRow()+", "+from.getSquareCol());
+        }
+
+         */
+        Piece uncapturePiece = null;
+        if(!whitesCapturedPiecesMap.isEmpty() && fromHere.getPiece().getSide().equals(Piece.Side.WHITE)
+                && fromHere.equalsSquare(whitesCapturedPiecesMap.get(whitesCapturedPiecesList.get(whitesCapturedPiecesList.size()-1)).toHere)
+                && toHere.equalsSquare(whitesCapturedPiecesMap.get(whitesCapturedPiecesList.get(whitesCapturedPiecesList.size()-1)).fromHere)
+                && whitesCapturedPiecesMap.get(whitesCapturedPiecesList.get(whitesCapturedPiecesList.size()-1)).depth == fromDepth)
+        {
+            //System.out.println("You've captured a black piece");
+            uncapturePiece = whitesCapturedPiecesList.get(whitesCapturedPiecesList.size()-1);
+            whitesCapturedPiecesMap.remove(whitesCapturedPiecesList.get(whitesCapturedPiecesList.size()-1));
+            whitesCapturedPiecesList.remove(whitesCapturedPiecesList.size()-1);
+        }
+        else if(!blacksCapturedPiecesMap.isEmpty() && fromHere.getPiece().getSide().equals(Piece.Side.BLACK)
+                && fromHere.equalsSquare(blacksCapturedPiecesMap.get(blacksCapturedPiecesList.get(blacksCapturedPiecesList.size()-1)).toHere)
+                && toHere.equalsSquare(blacksCapturedPiecesMap.get(blacksCapturedPiecesList.get(blacksCapturedPiecesList.size()-1)).fromHere)
+                && blacksCapturedPiecesMap.get(blacksCapturedPiecesList.get(blacksCapturedPiecesList.size()-1)).depth == fromDepth)
+        {
+            //System.out.println("You've captured a white piece");
+            uncapturePiece = blacksCapturedPiecesList.get(blacksCapturedPiecesList.size()-1);
+            blacksCapturedPiecesMap.remove(blacksCapturedPiecesList.get(blacksCapturedPiecesList.size()-1));
+            blacksCapturedPiecesList.remove(blacksCapturedPiecesList.size()-1);
+        }
+        // TODO: en passant and all the checks for blocking and being in check and stuff
+        //System.out.println("\n");
+        //System.out.println("fromHere: "+fromHere.getSquareRow()+", "+fromHere.getSquareCol());
+        //System.out.println("toHere: "+toHere.getSquareRow()+", "+toHere.getSquareCol());
+        //System.out.println("fromDepth: "+fromDepth);
+        //System.out.println("toDepth: "+toDepth);
+        //System.out.println(chessBoard[fromHere.getSquareRow()][fromHere.getSquareCol()].getPiece());
+        if(whiteInCheck)
+        {
+            whiteInCheck = false;
+        }
+        else if(blackInCheck)
+        {
+            blackInCheck = false;
+        }
+        else if(madeWhileInCheck)
+        {
+            if(fromHere.getPiece().getSide().equals(Piece.Side.BLACK))
+            {
+                blackInCheck = true;
+            }
+            else
+            {
+                whiteInCheck = true;
+            }
+        }
+        if(fromHere.getPiece() instanceof King)
+        {
+            if(Math.abs(fromHere.getSquareCol() - toHere.getSquareCol()) > 1)
+            {
+                if(fromHere.getSquareRow() == 7)
+                {
+                    if(fromHere.getSquareCol() == 6)
+                    {
+                        chessBoard[7][4].setPiece(fromHere.getPiece());
+                        fromHere.removePiece();
+                        chessBoard[7][7].setPiece(fromHere.getLeft(1).getPiece());
+                        fromHere.getLeft(1).removePiece();
+                        whiteKingSideRookMoved = false;
+                    }
+                    else if(fromHere.getSquareCol() == 2)
+                    {
+                        chessBoard[7][4].setPiece(fromHere.getPiece());
+                        fromHere.removePiece();
+                        chessBoard[7][0].setPiece(fromHere.getRight(1).getPiece());
+                        fromHere.getRight(1).removePiece();
+                        whiteQueenSideRookMoved = false;
+                    }
+                    whiteKing = chessBoard[7][4];
+                    whiteKingMoved = false;
+                }
+                else if(fromHere.getSquareRow() == 0)
+                {
+                    if(fromHere.getSquareCol() == 6)
+                    {
+                        chessBoard[0][4].setPiece(fromHere.getPiece());
+                        fromHere.removePiece();
+                        chessBoard[0][7].setPiece(fromHere.getLeft(1).getPiece());
+                        fromHere.getLeft(1).removePiece();
+                        blackKingSideRookMoved = false;
+                    }
+                    else if(fromHere.getSquareCol() == 2)
+                    {
+                        chessBoard[0][4].setPiece(fromHere.getPiece());
+                        fromHere.removePiece();
+                        chessBoard[0][0].setPiece(fromHere.getRight(1).getPiece());
+                        fromHere.getRight(1).removePiece();
+                        blackQueenSideRookMoved = false;
+                    }
+                    blackKing = chessBoard[0][4];
+                    blackKingMoved = false;
+                }
+            }
+            else
+            {
+                if(fromHere.getPiece().getSide().equals(Piece.Side.WHITE))
+                {
+                    if(whiteKingMoved)
+                    {
+                        if(whiteKingMovedDepth == toDepth)
+                        {
+                            whiteKingMoved = false;
+                        }
+                    }
+                    whiteKing = toHere;
+                }
+                else
+                {
+                    if(blackKingMoved)
+                    {
+                        if(blackKingMovedDepth == toDepth)
+                        {
+                            blackKingMoved = false;
+                        }
+                    }
+                    blackKing = toHere;
+                }
+            }
+        }
+        else if(fromHere.getPiece() instanceof Rook)
+        {
+            if(fromHere.getPiece().getSide().equals(Piece.Side.WHITE))
+            {
+                if(toHere.getSquareRow() == 7 && toHere.getSquareCol() == 7 && whiteKingSideRookMovedDepth == toDepth) //whiteKingSideRook
+                {
+                    whiteKingSideRookMoved = false;
+                }
+                else if(toHere.getSquareRow() == 7 && toHere.getSquareCol() == 0 && whiteQueenSideRookMovedDepth == toDepth)
+                {
+                    whiteQueenSideRookMoved = false;
+                }
+            }
+            else if(fromHere.getPiece().getSide().equals(Piece.Side.BLACK))
+            {
+                if(toHere.getSquareRow() == 0 && toHere.getSquareCol() == 7 && blackKingSideRookMovedDepth == toDepth)
+                {
+                    blackKingSideRookMoved = false;
+                }
+                else if(toHere.getSquareRow() == 0 && toHere.getSquareCol() == 0 && blackQueenSideRookMovedDepth == toDepth)
+                {
+                    blackQueenSideRookMoved = false;
+                }
+            }
+        }
+        toHere.setPiece(fromHere.getPiece());
+        chessBoard[toHere.getSquareRow()][toHere.getSquareCol()].setPiece(fromHere.getPiece());
+        chessBoard[fromHere.getSquareRow()][fromHere.getSquareCol()].removePiece();
+        //toHere.getPiece().setPlacement(toHere.getSquareRow(), toHere.getSquareCol());
+        //System.out.println("depth 0: "+pressed.getSquareRow()+", "+pressed.getSquareCol());
+        //copy.news.getPiece().setPlacement(squareToEval.getSquareRow(), squareToEval.getSquareCol());
+        fromHere.removePiece();
+        if(uncapturePiece != null)
+        {
+            if(toHere.getPiece() instanceof Pawn && ((Pawn) toHere.getPiece()).getCapturedEnPassantAt() != null && ((Pawn) toHere.getPiece()).getCapturedEnPassantAt().equalsSquare(fromHere))
+            {
+                if(toHere.getPiece().getSide().equals(Piece.Side.WHITE))
+                {
+                    ((Pawn) toHere.getPiece()).getCapturedEnPassantAt().getDown(1).setPiece(uncapturePiece);
+                    chessBoard[fromHere.getSquareRow()+1][fromHere.getSquareCol()].setPiece(uncapturePiece);
+                }
+                else
+                {
+                    ((Pawn) toHere.getPiece()).getCapturedEnPassantAt().getUp(1).setPiece(uncapturePiece);
+                    chessBoard[fromHere.getSquareRow()-1][fromHere.getSquareCol()].setPiece(uncapturePiece);
+                }
+                System.out.println("undo en passant");
+                ((Pawn) toHere.getPiece()).setCapturedEnPassantAt(null);
+            }
+            else
+            {
+                fromHere.setPiece(uncapturePiece);
+                chessBoard[fromHere.getSquareRow()][fromHere.getSquareCol()].setPiece(uncapturePiece);
+            }
+        }
+        from = pressed = news = toHere;
+    }
+
+    public void movePieceAI(Square from, Square pressed, int depth, Move move)
+    {
+        //System.out.println("MOVE FROM: "+from.getSquareRow()+", "+from.getSquareCol());
+        //System.out.println("MOVE TO: "+pressed.getSquareRow()+", "+pressed.getSquareCol());
+        if(!(from.getPiece() instanceof Pawn) && !pressed.containsPiece())
+        {
+            modFour++;
+            fiftyMoveDraw++;
+            if(fiftyMoveDraw == 100)
+            {
+                System.out.println("DRAW SILLY");
+            }
+        }
+        else
+        {
+            fiftyMoveDraw = 0;
+        }
+        //TODO: ISISSISUEIEUEIUSEIUEIUIOSEURISEU maybe also in future with castling
+        if(from.getPiece() instanceof King)
+        {
+            if(!castle(pressed))
+            {
+                //updateKing(pressed);
+            }
+            else
+            {
+                System.out.println("CASTLING PIECES!!!!!");
+            }
+        }
+        if(from.getPiece() instanceof Pawn)
+        {
+            boolean canEnPassant = false;
+            Piece.Side movingSide = from.getPiece().getSide();
+            Square left = null;
+            Square right = null;
+            if((Math.abs(from.getSquareRow() - pressed.getSquareRow()) == 2))
+            {
+                if(from.getSquareCol() == 0)
+                {
+                    if(from.getRight(1).containsPiece())
+                    {
+                        if(from.getRight(1).getPiece() instanceof Pawn && !from.getRight(1).getPiece().getSide().equals(movingSide))
+                        {
+                            right = from.getRight(1);
+                            canEnPassant = true;
+                        }
+                    }
+                }
+                else if(from.getSquareCol() == 7)
+                {
+                    if(from.getLeft(1).containsPiece())
+                    {
+                        if(from.getLeft(1).getPiece() instanceof Pawn && !from.getLeft(1).getPiece().getSide().equals(movingSide))
+                        {
+                            left = from.getLeft(1);
+                            canEnPassant = true;
+                        }
+                    }
+                }
+                else
+                {
+                    if(from.getRight(1).containsPiece())
+                    {
+                        if(from.getRight(1).getPiece() instanceof Pawn && !from.getRight(1).getPiece().getSide().equals(movingSide))
+                        {
+                            right = from.getRight(1);
+                            canEnPassant = true;
+                        }
+                    }
+                    else if(from.getLeft(1).containsPiece())
+                    {
+                        if(from.getLeft(1).getPiece() instanceof Pawn && !from.getLeft(1).getPiece().getSide().equals(movingSide))
+                        {
+                            left = from.getLeft(1);
+                            canEnPassant = true;
+                        }
+                    }
+                }
+                if(canEnPassant)
+                {
+                    if(from.getPiece().getSide().equals(Piece.Side.BLACK))
+                    {
+                        enPassant = chessBoard[pressed.getSquareRow() - 1][pressed.getSquareCol()];
+                        if(left != null)
+                        {
+                            ((Pawn)left.getPiece()).setToCaptureEnPassantAt(chessBoard[pressed.getSquareRow() - 1][pressed.getSquareCol()]);
+                        }
+                        if(right != null)
+                        {
+                            ((Pawn)right.getPiece()).setToCaptureEnPassantAt(chessBoard[pressed.getSquareRow() - 1][pressed.getSquareCol()]);
+                        }
+                    }
+                    else
+                    {
+                        enPassant = chessBoard[pressed.getSquareRow() + 1][pressed.getSquareCol()];
+                        if(left != null)
+                        {
+                            ((Pawn)left.getPiece()).setToCaptureEnPassantAt(chessBoard[pressed.getSquareRow() + 1][pressed.getSquareCol()]);
+                        }
+                        if(right != null)
+                        {
+                            ((Pawn)right.getPiece()).setToCaptureEnPassantAt(chessBoard[pressed.getSquareRow() + 1][pressed.getSquareCol()]);
+                        }
+                    }
+                    ((Pawn) from.getPiece()).setEnPassantBecameAvailableDepth(depth);
+                    //canEnPassant = false;
+                }
+            }
+        }
+        if(whiteInCheck || blackInCheck)
+        {
+            noLongerInCheck();
+        }
+        news = pressed;
+        //Piece oldsPiece = this.from.getPiece();
+        Piece oldsPiece = from.getPiece();
+
+        Piece.Side oldsSide = oldsPiece.getSide();
+
+        /*
+        if(oldsPiece instanceof King && ((Math.abs(from.getSquareRow() - pressed.getSquareRow()) > 1) || (Math.abs(from.getSquareCol() - pressed.getSquareCol()) > 1)))
+        {
+            System.out.println("SHOULD BE AN IMPOSSIBLE MOVE FOR KING");
+            System.out.println("from: "+from.getSquareRow()+", "+from.getSquareCol());
+            System.out.println("to: "+pressed.getSquareRow()+", "+pressed.getSquareCol());
+            throw new IndexOutOfBoundsException();
+        }
+
+         */
+
+        if(pressed.containsPiece())
+        {
+            Piece pressedPiece = pressed.getPiece();
+            Piece.Side pressedSide = pressed.getPiece().getSide();
+            if(pressedSide.equals(from.getPiece().getSide()))
+            {
+                //System.out.println(from.getPiece().getSide()+" "+from.getPiece()+" is trying to take a "+pressedSide+" "+pressedPiece);
+            }
+            if(pressedPiece instanceof King)
+            {
+                //System.out.println("capturing a king!");
+                //System.out.println(from.getPiece()+" on "+from.getSquareRow()+", "+from.getSquareCol()+" takes king on "+pressed.getSquareRow()+", "+pressed.getSquareCol());
+                //System.out.println("sides are: "+from.getPiece().getSide()+" and "+pressed.getPiece().getSide());
+            }
+            if(pressedSide.equals(Piece.Side.BLACK))
+            {
+                whitesCapturedPiecesList.add(pressedPiece);
+                whitesCapturedPiecesMap.put(pressedPiece, move);
+            }
+            else
+            {
+                blacksCapturedPiecesList.add(pressedPiece);
+                blacksCapturedPiecesMap.put(pressedPiece, move);
+            }
+        }
+        news.setPiece(oldsPiece);
+        //chessBoard[pressed.getSquareRow()][pressed.getSquareCol()].setPiece(oldsPiece);
+        //chessBoard[pressed.getSquareRow()][pressed.getSquareCol()].setBackground(Color.RED);
+        //pressed.setPiece(oldsPiece);
+        //news.getPiece().setPlacement(pressed.getSquareRow(),pressed.getSquareCol());
+        switchTurn(oldsSide);
+        //chessBoard[from.getSquareRow()][from.getSquareCol()].removePiece();
+        from.removePiece();
+        this.from.removePiece();
+        // TODO: more stuff for threefoldrepetition that I should come back to, see commented out code above as well
+        isPressed = false;
+        repaint();
+        if(news.getPiece() instanceof King)
+        {
+            if(news.getPiece().getSide().equals(Piece.Side.WHITE))
+            {
+                whiteKing = news;
+            }
+            else
+            {
+                blackKing = news;
+            }
+        }
+        /*
+        for(int i = 0; i < 8; i++)
+        {
+            for(int z = 0; z < 8; z++)
+            {
+                newBoard[i][z] = chessBoard[i][z];
+            }
+        }
+
+         */
+        //return newBoard;
+    }
+
+    public String boardToString()
+    {
+        String output = "";
+        for(int i = 0; i < 8; i++)
+        {
+            for(int z = 0; z < 8; z++)
+            {
+                Square s = chessBoard[i][z];
+                String pieceStr = (s.containsPiece()) ? s.getPiece().toString() : "-";
+                output += pieceStr+", ";
+                if(z == 7)
+                {
+                    output += "\n";
+                }
+            }
+        }
+        return output;
     }
 
 
@@ -1219,15 +1699,40 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     {
         //olds.setBackground(olds.revertColor());
         //olds.setBackground(Color.decode("#CED26E"));
-        if(olds.getSquareColorType().equalsIgnoreCase("light"))
+        /*
+        if(lastMovedFrom == null && lastMovedTo == null)
         {
-            olds.setBackground(Color.decode("#CED26E"));
+            lastMovedFrom = olds;
+            lastMovedTo = pressed;
         }
         else
         {
-            olds.setBackground(Color.decode("#BBBF63"));
+            lastMovedFrom.setBackground(lastMovedFrom.revertColor());
+            lastMovedTo.setBackground(lastMovedTo.revertColor());
+            lastMovedFrom = olds;
+            lastMovedTo = pressed;
         }
-        if(!(olds.getPiece() instanceof Pawn) && !pressed.containsPiece())
+        if(lastMovedFrom.getSquareColorType().equalsIgnoreCase("light"))
+        {
+            lastMovedFrom.setBackground(Color.decode("#CED26E"));
+        }
+        else
+        {
+            //olds.setBackground(Color.decode("#BBBF63"));
+            lastMovedFrom.setBackground(Color.decode("#A2A600"));
+        }
+        if(lastMovedTo.getSquareColorType().equalsIgnoreCase("light"))
+        {
+            lastMovedTo.setBackground(Color.decode("#CED26E"));
+        }
+        else
+        {
+            //olds.setBackground(Color.decode("#BBBF63"));
+            lastMovedTo.setBackground(Color.decode("#A2A600"));
+        }
+
+         */
+        if(!(from.getPiece() instanceof Pawn) && !pressed.containsPiece())
         {
             modFour++;
             fiftyMoveDraw++;
@@ -1251,24 +1756,23 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
              */
             fiftyMoveDraw = 0;
         }
-        if(olds.getPiece() instanceof King)
+        if(from.getPiece() instanceof King)
         {
             if(!castle(pressed))
             {
-                System.out.println("castling didn't work");
                 updateKing(pressed);
             }
-            olds.revertColor(availableKingMoves);
+            from.revertColor(availableKingMoves);
         }
         else
         {
-            olds.revertColor(availablePieceMoves);
+            from.revertColor(availablePieceMoves);
         }
-        if(olds.getPiece() instanceof Pawn)
+        if(from.getPiece() instanceof Pawn)
         {
-            if(Math.abs(olds.getSquareRow() - pressed.getSquareRow()) == 2)
+            if(Math.abs(from.getSquareRow() - pressed.getSquareRow()) == 2)
             {
-                if(olds.getPiece().getSide().equals(Piece.Side.BLACK))
+                if(from.getPiece().getSide().equals(Piece.Side.BLACK))
                 {
                     enPassant = chessBoard[pressed.getSquareRow() - 1][pressed.getSquareCol()];
                 }
@@ -1283,15 +1787,16 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
             noLongerInCheck();
         }
         news = pressed;
-        Piece oldsPiece = olds.getPiece();
+        Piece oldsPiece = from.getPiece();
         Piece.Side oldsSide = oldsPiece.getSide();
 
 
         news.setPiece(oldsPiece);
         //news.getPiece().setPlacement(new int[]{row, col});
         news.getPiece().setPlacement(row,col);
+        //System.out.println("move piece news: "+news.getPiece());
         switchTurn(oldsSide);
-        olds.removePiece();
+        from.removePiece();
         // TODO: more stuff for threefoldrepetition that I should come back to, see commented out code above as well
         /*
         if(!movedPawn && !captureOccurred)
@@ -1338,12 +1843,12 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         isPressed = false;
         repaint();
     }
-
+// TODO: make sure to change back if things are going poorly
     public void noLongerInCheck()
     {
-        thisIstheWay = null;
-        expCheck = null;
-        availableKingMoves = null;
+        //thisIstheWay = null;
+        //expCheck = null;
+        //availableKingMoves = null;
         whiteInCheck = false;
         blackInCheck = false;
     }
@@ -1356,7 +1861,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     public void paintMoves(ArrayList<Square> moves)
     {
         //olds.setBackground(Color.BLACK);
-        olds.setBackground(Color.decode("#646D40"));
+        from.setBackground(Color.decode("#646D40"));
         //olds.setBackground(new Color(86, 132, 95, 100));
         int counter = 0;
         for(Square s : moves)
@@ -1367,6 +1872,13 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                 {
                     //s.setBackground(Color.BLUE);
                     //s.dotMove.setVisible(true);
+                    if(s.getBackground().equals(Color.decode("#CED26E")) || s.getBackground().equals(Color.decode("#A2A600")))
+                    {
+                        s.setBackground(s.revertColor());
+                        repaint();
+                    }
+
+
                     s.attackedPieceOverlayLabel.setVisible(true);
                     //s.paint();
                     //s.setBackground(new Color(118, 144, 113, 10));
@@ -1387,20 +1899,35 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     {
         Square king = (whiteInCheck) ? whiteKing : blackKing;
         //String pressedType = pressed.getPiece().getType();
+
         if(pressed.getPiece() instanceof King)
         {
             availableKingMoves = whereKingCanGo(pressed);
+            //System.out.println("MOVE KING");
+            //System.out.println(pressed.getPiece());
+            //System.out.println(pressed.getSquareRow()+", "+pressed.getSquareCol());
+            for(Square s : availableKingMoves)
+            {
+                //System.out.println("possible move!");
+                //System.out.println(s.getSquareRow()+", "+s.getSquareCol());
+            }
             return availableKingMoves;
         }
         else
         {
             ArrayList<Square> pathway = new ArrayList<>();
+            if(thisIstheWay.isEmpty())
+            {
+                //System.out.println("thisistheway is empty");
+            }
             for(int i = 0; i < thisIstheWay.size(); i++)
             {
                 pathway.add(thisIstheWay.get(i));
             }
             //ArrayList<Square> limit = limitMoves(pathway, pressed);
             //return limit;
+            //System.out.println(pressed.getPiece());
+            //System.out.println(pressed.getSquareRow()+", "+pressed.getSquareCol());
             availablePieceMoves = limitMoves(pathway, pressed);
             return availablePieceMoves;
         }
@@ -1408,9 +1935,9 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
 
     public ArrayList<Square> ifBlocking(ArrayList<Square> blocking, boolean canEnPassant)
     {
-        ArrayList<Square> legalMoves = olds.getPiece().getLegalMoves();
+        ArrayList<Square> legalMoves = from.getPiece().getLegalMoves();
         ArrayList<Square> output = new ArrayList<>();
-        if(olds.getPiece() instanceof Pawn && canEnPassant)
+        if(from.getPiece() instanceof Pawn && canEnPassant)
         {
             legalMoves.add(enPassant);
         }
@@ -1429,6 +1956,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
 
     public ArrayList<Square> isInCheck(ArrayList<Square> check, Square checkingPiece)
     {
+        ArrayList<Square> empty = new ArrayList<>();
         for(Square s : check)
         {
             if(s.containsPiece())
@@ -1643,7 +2171,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                 }
             }
         }
-        return null;
+        return empty;
     }
 
     public ArrayList<Square> whereKingCanGo(Square kingSquare)
@@ -1757,11 +2285,27 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     {
         // not sure what this was for but it tries to allow king to escape where it's still in line with attacking piece
         //thisIstheWay = path;
-        Square escapeSquare = path.get(path.size()-1);
-
-        if(!path.get(path.size()-1).containsPiece())
+        ArrayList<Square> noOutput = new ArrayList<>();
+        Square escapeSquare = null;
+        if(!path.isEmpty())
         {
-            path.remove(path.size()-1);
+            escapeSquare = path.get(path.size()-1);
+
+            if(!path.get(path.size()-1).containsPiece())
+            {
+                path.remove(path.size()-1);
+            }
+            else if(path.get(path.size()-1).containsPiece())
+            {
+                if(path.get(path.size()-1).getPiece() instanceof King)
+                {
+                    path.remove(path.size()-1);
+                }
+            }
+        }
+        else
+        {
+            return noOutput;
         }
         ArrayList<Square> legalMoves = new ArrayList<>();
         ArrayList<Square> output = new ArrayList<>();
@@ -1822,8 +2366,8 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                         {
                             if(enPassant.getDown(rowTrav * -1).getPiece() instanceof Pawn)
                             {
-                                int pawnRow = olds.getSquareRow();
-                                int pawnCol = olds.getSquareCol();
+                                int pawnRow = from.getSquareRow();
+                                int pawnCol = from.getSquareCol();
                                 for(int i = 1; i < 8; i++)
                                 {
                                     Square isBlocking = chessBoard[pawnRow + (i * rowTrav)][pawnCol];
@@ -1832,7 +2376,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                                         if(isBlocking.containsPiece())
                                         {
                                             Piece isBlockingPiece = isBlocking.getPiece();
-                                            if(!isBlockingPiece.getSide().equals(olds.getPiece().getSide()))
+                                            if(!isBlockingPiece.getSide().equals(from.getPiece().getSide()))
                                             {
                                                 if(isBlockingPiece instanceof Queen || isBlockingPiece instanceof Rook)
                                                 {
@@ -2053,7 +2597,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         }
         if(!output.isEmpty())
         {
-            ArrayList<Square> blocking = isBlocking(olds);
+            ArrayList<Square> blocking = isBlocking(from);
             if(blocking == null)
             {
                 //path.add(escapeSquare);
@@ -2077,6 +2621,51 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         }
         return output;
     }
+/*
+    public MoveTransition makeMove(Move move, ChessBoard b, int depth)
+    {
+
+        ChessBoard transitionBoard = new ChessBoard(b);
+        transitionBoard.from = move.fromHere;
+        transitionBoard.pressed = move.toHere;
+        transitionBoard.news = move.toHere;
+
+        transitionBoard.updateCastleRights(depth);
+        if(transitionBoard.enPassant != null && !transitionBoard.pressed.containsPiece())
+        {
+            if(transitionBoard.pressed.equalsSquare(transitionBoard.enPassant))
+            {
+                transitionBoard.captureEnPassant();
+            }
+            transitionBoard.enPassant.setBackground(transitionBoard.enPassant.revertColor());
+        }
+        transitionBoard.enPassant = null;
+
+        transitionBoard.news.setPiece(transitionBoard.from.getPiece());
+        transitionBoard.from.removePiece();
+
+        transitionBoard.expCheck = transitionBoard.exposedCheck(transitionBoard.from, transitionBoard.news);
+        if(transitionBoard.news.getPiece() instanceof Pawn && transitionBoard.promotionDone && (transitionBoard.news.getSquareRow() == 0 || transitionBoard.news.getSquareRow() == 7))
+        {
+            transitionBoard.original = transitionBoard.generatePawnPromotion(transitionBoard.news);
+            transitionBoard.runDragAndRelease = false;
+        }
+        else if(transitionBoard.pressed.getBackground() == Color.WHITE)
+        {
+            transitionBoard.runDragAndRelease = false;
+            transitionBoard.promotePawn();
+        }
+        if(transitionBoard.promotionDone)
+        {
+            ArrayList<Square> check = transitionBoard.news.getPiece().getLegalMoves();
+            transitionBoard.thisIstheWay = transitionBoard.isInCheck(check, transitionBoard.news);
+            //inputBoard.assessCheckMateAndStaleMate();
+        }
+
+        return new MoveTransition(b, transitionBoard, move, depth);
+    }
+
+ */
 
     // TODO: make sure piece to expose check isn't moving along the check path (still blocks check)
 // TODO: make sure there's a clear path from enemy king to piece that can put it in check
@@ -2216,9 +2805,9 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     //TODO: does this account for en passant?
     public ArrayList<Square> isBlocking(Square square)
     {
-        olds = square;
-        int bpRow = olds.getSquareRow();
-        int bpCol = olds.getSquareCol();
+        from = square;
+        int bpRow = from.getSquareRow();
+        int bpCol = from.getSquareCol();
         int rowReverse;
         int colReverse;
         int kingRow;
@@ -2226,7 +2815,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         int rowDif;
         int colDif;
         ArrayList<Square> availableMoves = new ArrayList<>();
-        if(olds.getPiece().getSide().equals(Piece.Side.BLACK))
+        if(from.getPiece().getSide().equals(Piece.Side.BLACK))
         {
             kingRow = blackKing.getSquareRow();
             kingCol = blackKing.getSquareCol();
@@ -2262,11 +2851,11 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                 if(looking.containsPiece()) // also check if in bounds
                 {
                     Piece lookingPiece = looking.getPiece();
-                    if(lookingPiece.getSide().equals(olds.getPiece().getSide()) || lookingPiece instanceof Pawn || lookingPiece instanceof Knight || lookingPiece instanceof King)
+                    if(lookingPiece.getSide().equals(from.getPiece().getSide()) || lookingPiece instanceof Pawn || lookingPiece instanceof Knight || lookingPiece instanceof King)
                     {
                         return null;
                     }
-                    if(!looking.getPiece().getSide().equals(olds.getPiece().getSide()))
+                    if(!looking.getPiece().getSide().equals(from.getPiece().getSide()))
                     {
                         if((lookingPiece instanceof Rook || lookingPiece instanceof Queen) && (rowReverse == 0 || colReverse == 0))
                         {
@@ -2304,7 +2893,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
                 {
                     availableMoves.add(looking);
                 }
-                else if(looking.getPiece().getSide().equals(olds.getPiece().getSide()) && !(looking.getPiece() instanceof King))
+                else if(looking.getPiece().getSide().equals(from.getPiece().getSide()) && !(looking.getPiece() instanceof King))
                 {
                     return null;
                 }
@@ -2329,7 +2918,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
             //sideToCheck = (whiteTurn) ? "white" : "black";
             sideToCheck = (whiteTurn) ? Piece.Side.WHITE : Piece.Side.BLACK;
         }
-        olds = kingSquare;
+        from = kingSquare;
         ArrayList<Square> kingMoves = whereKingCanGo(kingSquare);
         if(kingMoves.size() != 0)
         {
@@ -2412,6 +3001,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         int pRow = pawnSquare.getSquareRow();
         int pCol = pawnSquare.getSquareCol();
         int rowTrav = (pawnSquare.getPiece().getSide().equals(Piece.Side.WHITE)) ? 1 : -1;
+        // TODO: an array of Squares with some null squares might cause issue
         for(int i = 0; i < 4; i++)
         {
             Square overlaySquare = chessBoard[pRow + (i * rowTrav)][pCol];

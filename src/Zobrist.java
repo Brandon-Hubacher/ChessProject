@@ -1,6 +1,7 @@
 import java.security.*;
-/*
+
 public class Zobrist {
+    static long zobristHash;
     static long zArray[][][] = new long[2][6][64];
     static long zEnPassant[] = new long[8];
     static long zCastle[] = new long[4];
@@ -9,9 +10,12 @@ public class Zobrist {
         SecureRandom random = new SecureRandom();
         return random.nextLong();
     }
+    /*
     public static long random64Bad() {
         return (long)(Math.random()*1000000000000000000L);
     }
+
+     */
     public static void zobristFillArray() {
         for (int color = 0; color < 2; color++)
         {
@@ -20,6 +24,7 @@ public class Zobrist {
                 for (int square = 0; square < 64; square++)
                 {
                     zArray[color][pieceType][square] = random64();
+                    //System.out.println(zArray[color][pieceType][square]);
                 }
             }
         }
@@ -33,6 +38,61 @@ public class Zobrist {
         }
         zBlackMove = random64();
     }
+
+    public static long createInitialHash()
+    {
+        long returnZKey = 0;
+        returnZKey ^= zArray[1][3][0];
+        returnZKey ^= zArray[1][1][1];
+        returnZKey ^= zArray[1][2][2];
+        returnZKey ^= zArray[1][4][3];
+        returnZKey ^= zArray[1][5][4];
+        returnZKey ^= zArray[1][2][5];
+        returnZKey ^= zArray[1][1][6];
+        returnZKey ^= zArray[1][3][7];
+        for(int i = 8; i < 16; i++)
+        {
+            returnZKey ^= zArray[1][0][i];
+        }
+        for(int i = 48; i < 56; i++)
+        {
+            returnZKey ^= zArray[0][0][i];
+        }
+        returnZKey ^= zArray[0][3][56];
+        returnZKey ^= zArray[0][1][57];
+        returnZKey ^= zArray[0][2][58];
+        returnZKey ^= zArray[0][4][59];
+        returnZKey ^= zArray[0][5][60];
+        returnZKey ^= zArray[0][2][61];
+        returnZKey ^= zArray[0][1][62];
+        returnZKey ^= zArray[0][3][63];
+
+        System.out.println(returnZKey);
+        zobristHash = returnZKey;
+        return returnZKey;
+    }
+
+    public long xor(Piece p, int row, int col)
+    {
+        zobristHash ^= zArray[p.getZobristSide()][p.getZobristType()][(row * 8) + col];
+        return zobristHash;
+    }
+
+    public long remove(Piece piece, int row, int col)
+    {
+        return xor(piece, row, col);
+    }
+
+    public long add(Piece piece, int row, int col)
+    {
+        return xor(piece, row, col);
+    }
+
+    // WP >> square shifts bits of WP to the right square times
+    // if & 1 == 1, then it's odd
+
+    //public long xor()
+
     public static long getZobristHash(long WP,long WN,long WB,long WR,long WQ,long WK,long BP,long BN,long BB,long BR,long BQ,long BK,long EP,boolean CWK,boolean CWQ,boolean CBK,boolean CBQ,boolean WhiteToMove) {
         long returnZKey = 0;
         for (int square = 0; square < 64; square++)
@@ -89,10 +149,13 @@ public class Zobrist {
         }
         for (int column = 0; column < 8; column++)
         {
+            /*
             if (EP == Moves.FileMasks8[column])
             {
                 returnZKey ^= zEnPassant[column];
             }
+
+             */
         }
         if (CWK)
             returnZKey ^= zCastle[0];
@@ -128,4 +191,3 @@ public class Zobrist {
 }
 
 
- */
