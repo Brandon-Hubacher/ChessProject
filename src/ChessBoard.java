@@ -69,7 +69,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     private boolean releasedEngineTurn = false;
     private boolean usingEngine = true;
 
-    public ChessBoard(ChessBoard b) throws AWTException {
+    public ChessBoard(ChessBoard b) {
         from = b.from;
         news = b.news;
         pressed = b.pressed;
@@ -103,7 +103,8 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         }
     }
 
-    public ChessBoard() throws AWTException {
+    // create chess board with custom JPanels (squares) that each contain a custom JComponent (piece)
+    public ChessBoard() {
         whiteTurn = true;
         size = new Dimension(1000, 1000);
 
@@ -216,6 +217,9 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     }
     public void mouseClicked(MouseEvent e){
     }
+
+    // current way with which I prompt the computer to find it's move
+    // TODO: Implement a way for the computer to move without unecessary action from the user
     public void mouseMoved(MouseEvent e)
     {
         if(whiteTurn && usingEngine && (pressedEngineTurn || releasedEngineTurn))
@@ -232,12 +236,14 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         }
     }
 
+    // includes both user actions of press (press down and hold) and click (press down and let go)
     public void mousePressed(MouseEvent e)
     {
         runDragAndRelease = true;
         int row;
         int col;
 
+        // Computer's turn
         if(whiteTurn && usingEngine)
         {
 
@@ -354,7 +360,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         else if(isPressed)
         {
             news = pressed;
-            if(pressed.containsPiece() && pressed.getBackground() != Color.WHITE && pressed.attackedPieceOverlayLabel.isVisible() /*pressed.getBackground() == Color.BLUE*/)
+            if(pressed.containsPiece() && pressed.getBackground() != Color.WHITE && pressed.attackedPieceOverlayLabel.isVisible())
             {
                 pressedPiece = pressed.getPiece();
                 pressedSide = pressedPiece.getSide();
@@ -429,6 +435,9 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
             }
         }
     }
+
+    // paint the pieces new position
+    // the piece itself is not being moved around, an image of the piece as a JLabel is moved while the square containing the piece is covered by a colored square, giving the appearance of being empty
     public void mouseDragged(MouseEvent e)
     {
         if(!runDragAndRelease)
@@ -449,6 +458,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         }
     }
 
+    // must work with releasing from dragging a piece as well as press up action from clicks
     public void mouseReleased(MouseEvent e)
     {
         layeredPane.setCursor(null);
@@ -490,7 +500,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
             releasedEngineTurn = false;
             return;
         }
-        if(!pressed.dotMove.isVisible() && !pressed.attackedPieceOverlayLabel.isVisible()/*pressed.getBackground() != Color.BLUE*/ && pressed.getBackground() != Color.WHITE && !pressed.getBackground().equals(Color.decode("#646D40")) /*&& from != null*/)
+        if(!pressed.dotMove.isVisible() && !pressed.attackedPieceOverlayLabel.isVisible() && pressed.getBackground() != Color.WHITE && !pressed.getBackground().equals(Color.decode("#646D40")))
         {
             clickAway();
         }
@@ -571,6 +581,8 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         }
     }
 
+    // runs the computer
+    // a move is made by creating a mousePressed and mouseReleased instance, containing the necessary information from the bestMove's Move class
     public void runEngine() throws AWTException, IOException {
         ChessBoard copy = new ChessBoard(this);
         MinMax.bestMove = m.miniMax(copy, Integer.MIN_VALUE, Integer.MAX_VALUE, depthForAI, true);
@@ -598,6 +610,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         mousePressed(squareToMovePieceTo);
         mouseReleased(secondMoveRelease);
 
+        // if move is the promotion of a piece, must also handle the additional actions of choosing the piece to promote to
         if(MinMax.bestMove.pawnPromotion)
         {
             MouseEvent pressPromotion;
@@ -638,6 +651,8 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         ((Pawn) from.getPiece()).setCapturedEnPassantAt(enPassant);
     }
 
+    // handles actions where the user "click's away" from the piece they're going to move
+    // resets to the state at the beginning of the player's turn... i.e. returns any dragged piece to it's square and gets rid of coloring of legal moves
     public void clickAway()
     {
 /*

@@ -21,7 +21,7 @@ public class Move {
 
      */
 
-    public Move(ChessBoard board, Square fromHere, Square toHere, Piece movedPiece, boolean moveMadeWhileInCheck/*, Piece capturedPiece*/, int depth, boolean isEnPassantMove, boolean pawnPromotion, Piece promotionPiece)
+    public Move(ChessBoard board, Square fromHere, Square toHere, Piece movedPiece, boolean moveMadeWhileInCheck, int depth, boolean isEnPassantMove, boolean pawnPromotion, Piece promotionPiece)
     {
         this.fromHere = fromHere;
         this.toHere = toHere;

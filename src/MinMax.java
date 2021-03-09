@@ -37,8 +37,6 @@ public class MinMax implements Serializable {
         return output;
     }
 
-
-
     public Move miniMax(ChessBoard inputBoard, int alpha, int beta, int depth, boolean whiteTurn) throws AWTException {
         counter++;
         Piece.Side sideToMove = (whiteTurn) ? Piece.Side.WHITE : Piece.Side.BLACK;
@@ -66,34 +64,25 @@ public class MinMax implements Serializable {
             if(whiteTurn)
             {
                 currentValue = minHelper(inputBoard, Integer.MIN_VALUE, Integer.MAX_VALUE, depth - 1, false);
-                inputBoard.undoMove(move.toHere, move.fromHere, depth, depth+1, move.moveMadeWhileInCheck, move);
+                inputBoard.undoMove(move.toHere, move.fromHere, depth, depth + 1, move.moveMadeWhileInCheck, move);
                 if(currentValue > maxEval)
                 {
                     maxEval = currentValue;
                     bestMove = move;
                 }
-                alpha = max(alpha, currentValue);
-                if(beta <= alpha)
-                {
-                    break;
-                }
             }
             else
             {
                 currentValue = maxHelper(inputBoard, Integer.MIN_VALUE, Integer.MAX_VALUE, depth - 1, true);
-                inputBoard.undoMove(move.toHere, move.fromHere, depth, depth+1, move.moveMadeWhileInCheck, move);
+                inputBoard.undoMove(move.toHere, move.fromHere, depth, depth + 1, move.moveMadeWhileInCheck, move);
                 if(currentValue < minEval)
                 {
                     minEval = currentValue;
                 }
-                beta = min(beta, currentValue);
-                if(beta <= alpha)
-                {
-                    break;
-                }
             }
 
         }
+        System.out.println(counter);
         return bestMove;
     }
 
@@ -118,11 +107,13 @@ public class MinMax implements Serializable {
             ArrayList<Square> check = inputBoard.getNews().getPiece().getLegalMoves();
             inputBoard.thisIstheWay = inputBoard.isInCheck(check, inputBoard.getNews());
             int currentValue = maxHelper(inputBoard, alpha, beta, depth - 1, true);
-            inputBoard.undoMove(move.toHere, move.fromHere, depth, depth+1, move.moveMadeWhileInCheck, move);
+            inputBoard.undoMove(move.toHere, move.fromHere, depth, depth + 1, move.moveMadeWhileInCheck, move);
+
             if(currentValue <= minValue)
             {
                 minValue = currentValue;
             }
+            //currentValue = min(minValue, currentValue);
             beta = min(beta, currentValue);
             if(beta <= alpha)
             {
@@ -155,10 +146,12 @@ public class MinMax implements Serializable {
             inputBoard.thisIstheWay = inputBoard.isInCheck(check, inputBoard.getNews());
             int currentValue = minHelper(inputBoard, alpha, beta, depth - 1, false);
             inputBoard.undoMove(move.toHere, move.fromHere, depth, depth+1, move.moveMadeWhileInCheck, move);
+
             if(currentValue >= maxValue)
             {
                 maxValue = currentValue;
             }
+            //maxValue = max(maxValue, currentValue);
             alpha = max(alpha, currentValue);
             if(beta <= alpha)
             {
